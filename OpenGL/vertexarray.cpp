@@ -20,18 +20,28 @@ VertexArray::~VertexArray(){
 }
 
 
-void VertexArray::AddBuffer(VertexBuffer& vb){
+void VertexArray::AddBuffer( const void* off_set,unsigned int size, int num ){
     bind();
-    vb.bind();
+    unsigned int testVBO;
+    int num_comp = size/sizeof(float);
+    glGenBuffers(1, &testVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, testVBO);
+    glBufferData(GL_ARRAY_BUFFER, num*size, (void*)off_set, GL_STATIC_DRAW);
     glEnableVertexAttribArray(count);
-    glVertexAttribPointer(count, vb.num_comp(), GL_FLOAT, GL_FALSE, 0, (void*)0);
+    glVertexAttribPointer(count, num_comp, GL_FLOAT, GL_FALSE, size, (void*)0);
+    glVertexAttribDivisor(count,1);
+    
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
     count++;
     
 }
 
 
 
-void VertexArray::AddBuffer2(VertexBuffer& vb){
+
+
+void VertexArray::Add_Vertex_Buffer(VertexBuffer& vb){
     bind();
     vb.bind();
     glEnableVertexAttribArray(0);
@@ -43,9 +53,9 @@ void VertexArray::AddBuffer2(VertexBuffer& vb){
     glEnableVertexAttribArray(3);
     glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(AMD::Vertex), (void*)offsetof(AMD::Vertex,texture));
     glEnableVertexAttribArray(4);
-    glVertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, sizeof(AMD::Vertex), (void*)offsetof(AMD::Vertex,index));
+    glVertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, sizeof(AMD::Vertex), (void*)offsetof(AMD::Vertex,tex_indx));
     glBindVertexArray(0);
-    
+    count +=5;
 }
 
 void VertexArray::bind(){

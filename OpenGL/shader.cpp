@@ -6,19 +6,59 @@
 //
 
 #include "shader.hpp"
+#include "Texture.hpp"
 
 
 
-Shader::Shader()
-{
-    std::string vertexShader = get_sh_str("vertex");
-    std::string fragmentShader = get_sh_str("fragment");
-    CreateShader(vertexShader, fragmentShader);
-
+Shader::Shader(std::string v_type, std::string f_type){
+    std::string vertexShader = get_sh_str(v_type, V_shader_file);
+    std::string fragmentShader = get_sh_str(f_type, F_shader_file);
+    //CreateShader(vertexShader, fragmentShader);
+    
+    
+    MV_loc = UniformLoc("u_MV");
+    MVP_loc = UniformLoc("u_MVP");
+    N_loc = UniformLoc("u_Normal");
+    
+    src_loc = UniformLoc("l_src");
+    light_clr_loc = UniformLoc("l_color");
+    
+    tex_locs[0] = UniformLoc("u_Texture");
+    tex_locs[1] = UniformLoc("u_Texture2");
+    tex_locs[2] = UniformLoc("u_map");
+    m_num_tex = 3;
+    
+    
+    
+    
+    
 }
 
-Shader::~Shader(){
+
+Shader::Shader(std::string file_name){
+    std::string vertexShader = get_sh_str("VERTEX", file_name);
+    std::string geometryShader = get_sh_str("GEOMETRY",file_name);
+    std::string fragmentShader = get_sh_str("FRAGMENT", file_name);
+    CreateShader(vertexShader, geometryShader, fragmentShader);
     
+
+    MV_loc = UniformLoc("u_MV");
+    MVP_loc = UniformLoc("u_MVP");
+    N_loc = UniformLoc("u_Normal");
+    
+    
+    src_loc = UniformLoc("l_src");
+    light_clr_loc = UniformLoc("l_color");
+    
+    
+    
+    
+    
+}
+
+
+Shader::~Shader(){
+    glDeleteProgram(m_ID);
 }
 
 
@@ -30,6 +70,9 @@ void Shader::bind(){
 void Shader::unbind(){
     glUseProgram(0);
 }
+
+
+
 
 
 unsigned int Shader::CompileShader(unsigned int type, const std::string& source){
@@ -53,17 +96,20 @@ unsigned int Shader::CompileShader(unsigned int type, const std::string& source)
     
     
 }
-void Shader::CreateShader(const std::string& vertexShader, const std::string& fragmentShader){
+void Shader::CreateShader(const std::string& vertexShader,const std::string& geometryShader, const std::string& fragmentShader){
     m_ID = glCreateProgram();
     unsigned int vs = CompileShader(GL_VERTEX_SHADER, vertexShader);
+    unsigned int gs = CompileShader(GL_GEOMETRY_SHADER, geometryShader);
     unsigned int fs = CompileShader(GL_FRAGMENT_SHADER, fragmentShader);
     
     glAttachShader(m_ID, vs);
+    glAttachShader(m_ID, gs);
     glAttachShader(m_ID, fs);
     glLinkProgram(m_ID);
     glValidateProgram(m_ID);
     
     glDeleteShader(vs);
+    glDeleteShader(gs);
     glDeleteShader(fs);
     
     return;
@@ -72,10 +118,20 @@ void Shader::CreateShader(const std::string& vertexShader, const std::string& fr
 }
 
 
-
+void Shader::Get_Uniforms(int texc, const char* texv[]){
+    for (int i = 0; i< texc; i++){
+        tex_locs[i] = UniformLoc(texv[i]);
+        m_num_tex++;
+    }
+}
 
 int Shader::UniformLoc(const char* name) const{
-    return glGetUniformLocation(m_ID, name);
+    int loc = glGetUniformLocation(m_ID, name);
+    if(loc == -1){
+        std::cout << "Uniform not found" << std::endl;
+        exit(2);
+    }
+    else{return loc;}
 }
 
 
@@ -91,16 +147,40 @@ bool comment(std::string str, std::string reg_ex){
 std::string Shader::get_sh_str(std::string sh_type){
     std::ifstream in_file;
     std::string shader_string;
-    in_file.open(m_shader_file);
+    in_file.open(V_shader_file);
     if (!in_file.is_open()){
         std::cout << "ERROR!!" << std::endl;
     }
     std::string line;
     while (getline(in_file, line)) {
-        if (comment(line, "#shader " + sh_type)){
+        if (comment(line, "#SHADER " + sh_type)){
             while (getline(in_file, line)){
                 if (!line.empty()){
-                    if (comment(line, "#shader")) {
+                    if (comment(line, "#END")) {
+                        break;
+                    }
+                    else{shader_string.append(line + "\n");}
+                }
+            }
+        }
+    }
+    return shader_string;
+}
+
+
+std::string Shader::get_sh_str(std::string sh_type, std::string sh_file){
+    std::ifstream in_file;
+    std::string shader_string;
+    in_file.open(sh_file);
+    if (!in_file.is_open()){
+        std::cout << "ERROR!!" << std::endl;
+    }
+    std::string line;
+    while (getline(in_file, line)) {
+        if (comment(line, "#SHADER " + sh_type)){
+            while (getline(in_file, line)){
+                if (!line.empty()){
+                    if (comment(line, "#END")) {
                         break;
                     }
                     else{shader_string.append(line + "\n");}
@@ -115,6 +195,90 @@ std::string Shader::get_sh_str(std::string sh_type){
 
 
 
+void Shader::Set_Uniforms(Operator& op, Light_Src src){
+    bind();
+    op.set_Model();
+    op.set_View();
+    op.set_projection();
+    op.set_MV();
+    op.set_MVP();
+    
+    
+    Set_Value('M', op.MV_ptr);
+    Set_Value('N', op.rot_ptr);
+    Set_Value('P', op.MVP_ptr);
+    
+    
+    Set_Value('s', src.get_light_src());
+    Set_Value('z', src.get_light_clr());
+    Set_Value('x', src.get_light_sat());
+    
+}
+
+void Shader::Set_Value(char type, const float* mat_ptr) const {
+    switch (type) {
+            
+        case 'M':
+            glUniformMatrix4fv(MV_loc,1,GL_FALSE, mat_ptr);
+            break;
+            
+        case 'N':
+            glUniformMatrix4fv(N_loc,1,GL_FALSE, mat_ptr);
+            break;
+            
+        case 'P':
+            glUniformMatrix4fv(MVP_loc,1,GL_FALSE, mat_ptr);
+            break;
+            
+        default:
+            break;
+    }
+}
+
+void Shader::Set_Value(char type, const AMD::Vec2& vec) const {
+    glUniform2f(src_loc, vec.x, vec.y);
+}
+
+
+void Shader::Set_Value(char type, const AMD::Vec3& vec) const {
+    switch (type) {
+        case 's':
+            glUniform3f(src_loc, vec.x, vec.y, vec.z);
+            break;
+        case 'c':
+            glUniform3f( light_clr_loc, vec.x, vec.y, vec.z);
+            break;
+            
+        case 'd':
+            
+            break;
+            
+            
+            
+            
+        default:
+            break;
+    }
+}
+
+
+void Shader::Set_Value(char type, const AMD::Vec4& vec) const {
+    glUniform4fv(light_clr_loc,1,(float*) &vec);
+}
+
+
+void Shader::Set_Value(char type, const float& f) const {
+    glUniform1f(sat_loc,f);
+}
 
 
 
+
+
+void Shader::set_texture(Texture& tx){
+    bind();
+    for (int i = 0; i< m_num_tex; i++){
+        tx.Bind(i);
+        glUniform1i(tex_locs[i], i);
+    }
+}

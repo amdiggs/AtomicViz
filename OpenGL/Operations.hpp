@@ -14,79 +14,68 @@
 #include "My_Types.hpp"
 
 class Shader;
-struct color;
+//struct color;
 
 class Operator{
-private:
+public:
+    float w_scale = 9.0/16.0;
     void Reset(AMD::Mat4& mat);
+
+    
     //Model Matrix
     AMD::Mat4 M_mat;
     const float* M_ptr = &M_mat.m[0][0];
-    int M_loc;
+    float M_scale =1.0;
+    AMD::Vec3 M_Scale_vec;
+    AMD::Vec3 M_Trans_vec;
+    AMD::Vec3 M_rotation_vec;
+    AMD::Mat4 M_Rot_mat;
+    AMD::Mat4 M_TSc_mat;
     
-    AMD::Mat4 rot_mat;
-    const float* rot_ptr = &rot_mat.m[0][0];
-    int rot_loc;
-    
-    AMD::Mat4 prev_rot;
+    //Normal Operator
+    AMD::Mat4 Normal_mat;
+    const float* rot_ptr = &Normal_mat.m[0][0];
+    AMD::Vec3 N_rot_vec;
     
 
-    AMD::Mat4 Ob_mat;
-    const float* Ob_ptr =&Ob_mat.m[0][0];
-    int Ob_loc;
     // View Matrix
         
     AMD::Mat4 V_mat;
     const float* V_ptr = &V_mat.m[0][0];
     int V_loc;
+    AMD::Vec3 V_translation;
+    AMD::Vec3 V_rotation;
+    float V_scale = 1.0;
+    
+    AMD::Mat4 MV_mat;
+    const float* MV_ptr = &MV_mat.m[0][0];
     
     
     //Projection Matrix
     AMD::Mat4 Proj_mat;
     const float* Proj_ptr = &Proj_mat.m[0][0];
     int Proj_loc;
-    
-    //MISC.
-    AMD::Vec3 light_src_dir;
-    int src_loc;
-    
-    AMD::Vec4 Ob_Color;
-    int color_loc;
+    AMD::Vec4 Proj_vec;
     
     
+    AMD::Mat4 MVP_mat;
+    const float* MVP_ptr = &MVP_mat.m[0][0];
     
-    float sat =1.0;
-    int sat_loc;
+
     
-public:
-    Operator(const Shader& sh);
+//public:
+    Operator();
     ~Operator();
     
-    void translate(float dx, float dy, float dz, AMD::Mat4& mat);
-    void translate(AMD::Vec3 trans, AMD::Mat4& mat);
-    
-    void rotation(float a, float b, float c, AMD::Mat4& mat);
-    void rotation(AMD::Vec3 ang, AMD::Mat4& mat);
-    
-    void scale(float sx, float sy, float sz, float sw, AMD::Mat4& mat);
-    void scale(AMD::Vec4 vec, AMD::Mat4& mat);
+    void Set_W_Scale(int w, int h);
     
     
-    void Ob_set_rotation(AMD::Vec3 ang);
-    void Ob_set_translation(AMD::Vec3 trans);
-    void Ob_set_scale(float sc);
-    void Ob_set_scale(AMD::Vec3 sc);
-    void set_Object();
-    
-    
-    void M_set_rotation(float ax, float ay, float az);
-    void M_set_rotation();
-    void M_set_scale(float sx, float sy, float sz, float sw);
     void M_set_rotation(AMD::Vec3 vec);
-    void M_set_scale(AMD::Vec4 vec);
-    void M_set_translation(AMD::Vec3 vec);
-    void object_translate(AMD::Vec3 trans);
-    void set_Model();
+    void M_set_rotation();
+    AMD::Vec3& M_Get_Trans();
+    float& M_Get_Scale();
+    void M_Set_Scale();
+    void set_Model() ;
     
     
     
@@ -95,48 +84,50 @@ public:
     void V_set_translation(AMD::Vec3 tr);
     void V_set_translation();
     void V_set_scale(AMD::Vec4);
-    void set_View();
-    
-    void Projection(float near, float far, float xlim, float ylim);
-    void set_projection(float near, float far, float dx, float dy);
-    void set_projection(float pj[4]);
-    
-    void set_light(AMD::Vec3 src);
-    void set_light(float src[3]);
-    void set_light_dir(float theta, float phi);
-    AMD::Vec3 get_Light_src();
-    
-    void set_ob_clr();
-    void set_ob_clr(AMD::Vec4 clr);
-    
-    void set_sat(float);
-    
-    AMD::Vec4& get_ob_clr();
+    void V_set_scale(float sc);
+    float* get_V_scale();
+    void set_View() ;
+
+    void Projection(AMD::Vec4 vec);
+    void set_projection();
+    AMD::Vec4& get_proj_vec();
     
     
-    AMD::Vec3 V_translation;
-    AMD::Vec3 V_rotation;
-    AMD::Vec3 M_origin;
-    AMD::Vec3 M_rotation;
+    void set_MV();
+    void set_MVP();
+    AMD::Mat4 Get_MV() const;
+    AMD::Mat4 Get_MVP() const;
 };
 
 
-class Projection{
+class Light_Src{
 private:
-    float m_near;
-    float m_far;
-    float m_xlim;
-    float m_ylim;
-    void reset();
+
+    AMD::Vec3 light_src_dir;
+    int src_loc;
+    
+    AMD::Vec4 light_color;
+    int light_clr_loc;
+    
+    float sat =1.0;
+    int sat_loc;
+    
     
 public:
-    Projection();
-    ~Projection();
-    float Proj_mat[4][4];
-    const float* Proj_ptr = &Proj_mat[0][0];
+    Light_Src();
+    ~Light_Src();
+    void set_light_dir(AMD::Vec3 src);
+    void set_light_dir(float theta, float phi);
+    void set_light_color(AMD::Vec4 l_clr);
+    void set_sat(float);
     
-    void set_FOV(float near, float far, float xlim, float ylim);
+    AMD::Vec3& get_light_src();
+    AMD::Vec4& get_light_clr();
+    float& get_light_sat();
     
+    float* get_src_ptr();
+    float* get_clr_ptr();
+    float* get_sat_ptr();
     
     
     

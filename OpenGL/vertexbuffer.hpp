@@ -13,17 +13,16 @@
 class VertexBuffer{
 private:
     unsigned int render_ID;
-    int m_comp;
     
 public:
-    VertexBuffer(const void* data, unsigned int size, int comp);
+    VertexBuffer();
+    VertexBuffer(const void* data, unsigned int size);
     ~VertexBuffer();
     
-    
+    void Gen_Buffer(const void* data, unsigned int size);
     void bind();
     void unbind();
     unsigned int get_ID();
-    int num_comp();
     
 };
 
@@ -34,14 +33,16 @@ private:
     unsigned int m_count;
     
 public:
+    IndexBuffer();
     IndexBuffer(const unsigned int* data, unsigned int count);
     ~IndexBuffer();
     
-    
+    void Gen_Buffer(const void* data, unsigned int count);
     void bind();
     void unbind();
     unsigned int get_num();
     
 };
+    
 
 #endif /* vertexbuffer_hpp */

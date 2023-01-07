@@ -8,8 +8,10 @@
 #include "vertexbuffer.hpp"
 #include "Render.hpp"
 
-VertexBuffer::VertexBuffer(const void* data, unsigned int size, int num)
-:m_comp(num) {
+VertexBuffer::VertexBuffer(){}
+
+VertexBuffer::VertexBuffer(const void* data, unsigned int size)
+{
     glGenBuffers(1, &render_ID);
     glBindBuffer(GL_ARRAY_BUFFER, render_ID);
     glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
@@ -18,6 +20,14 @@ VertexBuffer::VertexBuffer(const void* data, unsigned int size, int num)
 
 VertexBuffer::~VertexBuffer(){
     glDeleteBuffers(1, &render_ID);
+}
+
+void VertexBuffer::Gen_Buffer(const void* data, unsigned int size){
+    glGenBuffers(1, &render_ID);
+    glBindBuffer(GL_ARRAY_BUFFER, render_ID);
+    glBufferData(GL_ARRAY_BUFFER, size, data, GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER,0);
+    
 }
 
 void VertexBuffer::bind(){
@@ -35,9 +45,8 @@ unsigned int VertexBuffer::get_ID(){
     return render_ID;
 }
 
-int VertexBuffer::num_comp(){
-    return m_comp;
-}
+
+IndexBuffer::IndexBuffer(){}
 
 IndexBuffer::IndexBuffer(const unsigned int* data, unsigned int count)
 :m_count(count)
@@ -52,6 +61,15 @@ IndexBuffer::~IndexBuffer(){
     glDeleteBuffers(1, &render_ID);
 }
 
+void IndexBuffer::Gen_Buffer(const void* data, unsigned int count){
+    this->m_count = count;
+    glGenBuffers(1, &render_ID);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, render_ID);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, count * sizeof(unsigned int), data, GL_STATIC_DRAW);
+    unbind();
+    
+}
+
 void IndexBuffer::bind(){
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, render_ID);
     
@@ -64,7 +82,6 @@ void IndexBuffer::unbind(){
 unsigned int IndexBuffer::get_num(){
     return m_count;
 }
-
 
 
 

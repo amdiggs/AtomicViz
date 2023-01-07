@@ -10,118 +10,24 @@
 
 
 
-Operator::Operator(const Shader& sh)
+Operator::Operator()
 {
-    M_loc = sh.UniformLoc("u_Model");
-    rot_loc =sh.UniformLoc("u_rot");
-    V_loc = sh.UniformLoc("u_View");
-    src_loc = sh.UniformLoc("l_src");
-    Proj_loc = sh.UniformLoc("u_Proj");
-    color_loc = sh.UniformLoc("u_color");
-    sat_loc = sh.UniformLoc("u_sat");
-    Ob_loc = sh.UniformLoc("u_Object");
-    light_src_dir = AMD::Vec3(0.0, 1.0, 0.0);
-    set_light(light_src_dir);
-    set_sat(sat);
-    V_translation[2] = -2.0;
-
     
+    Proj_vec = AMD::Vec4(3.0, 3.0, 1.0, 10.0);
+    M_scale = 1.25;
+    M_Scale_vec = AMD::Vec3(M_scale,M_scale,M_scale);
     
 }
 
 
 
-Operator::~Operator(){
+Operator::~Operator(){}
 
-    
+
+void Operator::Set_W_Scale(int w, int h){
+    w_scale = (float)h / (float)w;
 }
 
-
-/*
- cos(a)*cos(b)  cos(a)*sin(b)*sin(c)-sin(a)*cos(c)  cos(a)*sin(b)*cos(c)+sin(a)*sin(c)
- sin(a)*cos(b), sin(a)*sin(b)*sin(c) + cos(a)*cos(c), sin(a)*sin(b)*cos(c)-cos(a)*sin(c)
- -sin(b),        cos(b)*sin(c)                       cos(b)*cos(c)
-
-
-*/
-void Operator::rotation(float a, float b, float c, AMD::Mat4& mat){
-    AMD::Mat4 rot;
-    AMD::Vec4 r0 (cos(a)*cos(b),  cos(a)*sin(b)*sin(c) - sin(a)*cos(c),  cos(a)*sin(b)*cos(c)+sin(a)*sin(c), 0.0);
-    AMD::Vec4 r1(sin(a)*cos(b), sin(a)*sin(b)*sin(c) + cos(a)*cos(c), sin(a)*sin(b)*cos(c)-cos(a)*sin(c), 0.0);
-    AMD::Vec4 r2(-sin(b), cos(b)*sin(c), cos(b)*cos(c), 0.0);
-    AMD::Vec4 r3(0.0, 0.0, 0.0, 1.0);
-    
-    rot.assign_row(0, r0);
-    rot.assign_row(1, r1);
-    rot.assign_row(2, r2);
-    rot.assign_row(3, r3);
-    mat = rot*mat;
-    
-    return;
-}
-
-
-
-
-void Operator::rotation(AMD::Vec3 ang, AMD::Mat4& mat){
-    float a = ang.x; float b = ang.y; float c = ang.z;
-    AMD::Mat4 rot;
-    AMD::Vec4 r0 (cos(a)*cos(b),  cos(a)*sin(b)*sin(c) - sin(a)*cos(c),  cos(a)*sin(b)*cos(c)+sin(a)*sin(c), 0.0);
-    AMD::Vec4 r1(sin(a)*cos(b), sin(a)*sin(b)*sin(c) + cos(a)*cos(c), sin(a)*sin(b)*cos(c)-cos(a)*sin(c), 0.0);
-    AMD::Vec4 r2(-sin(b), cos(b)*sin(c), cos(b)*cos(c), 0.0);
-    AMD::Vec4 r3(0.0, 0.0, 0.0, 1.0);
-    
-    rot.assign_row(0, r0);
-    rot.assign_row(1, r1);
-    rot.assign_row(2, r2);
-    rot.assign_row(3, r3);
-    mat = rot*mat;
-    
-    return;
-}
-
-
-
-void Operator::translate(float dx, float dy, float dz, AMD::Mat4& mat){
-    AMD::Mat4 T;
-    T[3][0] = dx;
-    T[3][1] = dy;
-    T[3][2] = dz;
-    mat = T*mat;
-    return;
-}
-
-
-
-void Operator::translate(AMD::Vec3 trans, AMD::Mat4& mat){
-    AMD::Mat4 T;
-    T[3][0] = trans.x;
-    T[3][1] = trans.y;
-    T[3][2] = trans.z;
-    mat = T*mat;
-    return;
-}
-
-
-void Operator::scale(float sx, float sy, float sz, float sw, AMD::Mat4& mat) {
-    AMD::Mat4 sc;
-    sc[0][0] = sx;
-    sc[1][1] = sy;
-    sc[2][2] = sz;
-    sc[3][3] = sw;
-    mat = sc*mat;
-    return;
-}
-
-void Operator::scale(AMD::Vec4 vec, AMD::Mat4& mat){
-    AMD::Mat4 sc;
-    sc[0][0] = vec[0];
-    sc[1][1] = vec[1];
-    sc[2][2] = vec[2];
-    sc[3][3] = vec[3];
-    mat = sc*mat;
-    return;
-}
 
 void Operator::Reset(AMD::Mat4& mat){
     
@@ -136,160 +42,135 @@ void Operator::Reset(AMD::Mat4& mat){
     
 }
 
-void Operator::Projection(float near, float far, float xlim, float ylim){
+
+
+
+void Operator::Projection(AMD::Vec4 vec){
+    float near = vec.b;
+    float far = vec.a;
     float dz = abs(far - near);
-    float yalpha = ylim / (2.0 * dz);
-    float xalpha = xlim/(2.0 * dz);
+    float yalpha = vec.g / (2.0 * dz);
+    float xalpha = vec.r/(2.0 * dz);
     
-    Proj_mat.m[0][0] = 1.0 / xalpha;
-    Proj_mat.m[1][1] = 1.0 / yalpha;
-    Proj_mat.m[2][2] = -1.0*(far + near) / (far - near);
-    Proj_mat.m[2][3] = -1.0;
-    Proj_mat.m[3][2] = (-2.0*far*near) / (far - near);
     
-}
-
-
-
-// SET OBJECT MATRIX
-void Operator::Ob_set_rotation(AMD::Vec3 ang){
-    rotation(ang, Ob_mat);
-    //rotation(ang, rot_mat);
-}
-void Operator::Ob_set_translation(AMD::Vec3 trans){
-    translate(trans, Ob_mat);
+    Proj_mat[0][0] = near;
+    Proj_mat[1][1] = near;
+    Proj_mat[2][2] = (far + near) / (far - near);
+    Proj_mat[2][3] = (-2.0*far*near) / (far - near);
+    Proj_mat[3][2] = 1.0;
+    Proj_mat[3][3] = 0.0;
+    
+    
     
 }
 
-void Operator::Ob_set_scale(float sc){
-    scale(sc, sc, sc, 1.0, Ob_mat);
-    
-}
-
-void Operator::Ob_set_scale(AMD::Vec3 sc){
-    scale(sc.x, sc.y, sc.z, 1.0, Ob_mat);
-    
-}
-void Operator::set_Object(){
-    glUniformMatrix4fv(Ob_loc,1,GL_FALSE, Ob_ptr);
-    Reset(Ob_mat);
-}
 
 
+//Model Matrix
 
-void Operator::M_set_rotation(float ax, float ay, float az) { 
-    rotation(ax, ay, az, M_mat);
-    rotation(ax, ay, az, rot_mat);
-    glUniformMatrix4fv(rot_loc,1,GL_FALSE, rot_ptr);
-    Reset(rot_mat);
-}
 
 void Operator::M_set_rotation() {
-    rotation(M_rotation.x,M_rotation.y,M_rotation.z, M_mat);
-    rotation(M_rotation.x, M_rotation.y,M_rotation.z, rot_mat);
+    Normal_mat.Transpose();
+    M_Rot_mat.Rotate(M_rotation_vec);
+    Normal_mat.Rotate(M_rotation_vec);
+    M_rotation_vec.Reset();
+    Normal_mat.Transpose();
 
 }
 
-void Operator::M_set_translation(AMD::Vec3 tr) {
-    translate(tr.x, tr.y, tr.z, M_mat);
+
+AMD::Vec3& Operator::M_Get_Trans(){
+    return M_Trans_vec;
 }
 
-void Operator::M_set_scale(float sx, float sy, float sz, float sw) {
-    scale(sx, sy, sz, sw, M_mat);
+
+float& Operator::M_Get_Scale(){
+    return M_scale;
+}
+
+void Operator::M_Set_Scale(){
+    M_Scale_vec = AMD::Vec3(M_scale,M_scale,M_scale);
 }
 
 void Operator::set_Model(){
-    glUniformMatrix4fv(M_loc, 1, GL_FALSE, M_ptr);
-    glUniformMatrix4fv(rot_loc,1,GL_FALSE, rot_ptr);
-    //Reset(rot_mat);
-    //Reset(M_mat);
+    Reset(M_mat);
+    M_mat = M_Rot_mat * M_mat;
+    M_Set_Scale();
+    M_mat.Scale(M_Scale_vec);
+    M_mat.Translate(M_Trans_vec);
 }
 
 
 
 //#############################################################
 void Operator::V_set_rotation(float ax, float ay, float az){
-    rotation(ax, ay, az, V_mat);
+    V_mat.Rotate(V_rotation);
 }
 
 void Operator::V_set_rotation(){
-    translate(-V_translation[0], -V_translation[1], -V_translation[2], V_mat);
-    rotation(V_rotation[0], V_rotation[1], V_rotation[2], V_mat);
-    translate(V_translation[0], V_translation[1], V_translation[2], V_mat);
+    V_mat.Translate(V_translation);
+    V_mat.Rotate(V_rotation);
+    
 }
 
 void Operator::V_set_translation(AMD::Vec3 tr){
-    translate(tr.x, tr.y, tr.z, V_mat);
+    V_mat.Translate(tr);
 }
 
 void Operator::V_set_translation(){
-    translate(V_translation.x, V_translation.y, V_translation.z, V_mat);
+    V_mat.Translate(V_translation);
 }
 
-void Operator::V_set_scale(AMD::Vec4 vec){
-    scale(vec, V_mat);
+
+void Operator::V_set_scale(float sc){
+    V_mat.Scale(AMD::Vec3(w_scale*sc,sc,sc));
 }
 
 void Operator::set_View(){
-    glUniformMatrix4fv(V_loc, 1, GL_FALSE, V_ptr);
     Reset(V_mat);
+    V_set_translation();
+    V_set_scale(V_scale);
+    
+    
+}
+
+float* Operator::get_V_scale(){
+    return &V_scale;
+}
+
+
+void Operator::set_MV(){
+    
+    MV_mat = V_mat * M_mat;
+    MV_mat.Transpose();
+}
+
+void Operator::set_projection() {
+    Projection(Proj_vec);
+}
+
+
+AMD::Vec4& Operator::get_proj_vec(){
+    return this->Proj_vec;
+}
+
+
+void Operator::set_MVP(){
+    
+    MVP_mat = Proj_mat *V_mat * M_mat;
+    MVP_mat.Transpose();
+    
+}
+
+AMD::Mat4 Operator::Get_MVP() const{
+    return MVP_mat;
 }
 
 
 
-
-void Operator::set_projection(float near, float far, float dx, float dy) { 
-    Projection(near, far, dx, dy);
-    glUniformMatrix4fv(Proj_loc, 1, GL_FALSE, Proj_ptr);
+AMD::Mat4 Operator::Get_MV() const{
+    return MV_mat;
 }
-
-void Operator::set_projection(float pj[4]){
-    Projection(pj[0],pj[1],pj[2],pj[3]);
-    glUniformMatrix4fv(Proj_loc, 1, GL_FALSE, Proj_ptr);
-}
-
-void Operator::set_light(AMD::Vec3 src) {
-    light_src_dir.x = src.x; light_src_dir.y = src.y; light_src_dir.z = src.z;
-    glUniform3f(src_loc, light_src_dir.x, light_src_dir.y,light_src_dir.z);
-}
-
-
-void Operator::set_light(float src[3]) {
-    light_src_dir.x = src[0]; light_src_dir.y = src[1]; light_src_dir.z = src[2];
-    glUniform3f(src_loc, light_src_dir.x, light_src_dir.y,light_src_dir.z);
-}
-
-void Operator::set_light_dir(float theta, float phi){
-    light_src_dir.x = cos(phi)*sin(theta);
-    light_src_dir.z = sin(phi)*sin(theta);
-    light_src_dir.y = cos(theta);
-    glUniform3f(src_loc, light_src_dir.x, light_src_dir.y,light_src_dir.z);
-}
-
-AMD::Vec3 Operator::get_Light_src(){
-    return light_src_dir;
-}
-
-
-void Operator::set_ob_clr(){
-    //glUniform4f(color_loc,Ob_Color.r,Ob_Color.g,Ob_Color.b,Ob_Color.a);
-}
-
-void Operator::set_ob_clr(AMD::Vec4 clr){
-    glUniform4f(color_loc,clr[0],clr[1],clr[2],clr[3]);
-}
-
-void Operator::set_sat(float s){
-    sat = s;
-    glUniform1f(sat_loc,sat);
-}
-
-AMD::Vec4& Operator::get_ob_clr(){
-    return this ->Ob_Color;
-}
-
-
-
 
 
 
@@ -306,39 +187,54 @@ AMD::Vec4& Operator::get_ob_clr(){
 
 
 
+Light_Src::Light_Src()
+:light_src_dir(AMD::Vec3(0.0,1.0,0.0)),light_color(AMD::Vec4(0.6, 0.8, 0.5, 0.1))
+{}
 
-Projection::Projection() { 
-    
+Light_Src::~Light_Src(){}
+
+
+void Light_Src::set_light_dir(AMD::Vec3 src) { 
+    light_src_dir = src;
 }
 
-Projection::~Projection() { 
-
+void Light_Src::set_light_dir(float theta, float phi) { 
+    light_src_dir.x = cos(phi)*sin(theta);
+    light_src_dir.z = sin(phi)*sin(theta);
+    light_src_dir.y = cos(theta);
 }
 
-void Projection::set_FOV(float near, float far, float xlim, float ylim) {
-    float dz = abs(far - near);
-    float yalpha = ylim/(2.0 * dz);
-    float xalpha = xlim/(2.0* dz);
-    
-    Proj_mat[0][0] = 1/xalpha;
-    Proj_mat[1][1] = 1/yalpha;
-    Proj_mat[2][2] = (far + near) / dz;
-    Proj_mat[3][2] = (2*far*near) / dz;
-    Proj_mat[2][3] = -1.0;
-    
+void Light_Src::set_light_color(AMD::Vec4 l_clr) { 
+    light_color = l_clr;
+}
 
-    
+void Light_Src::set_sat(float val) {
+    sat= val;
+}
+
+AMD::Vec3 &Light_Src::get_light_src() { 
+    return this->light_src_dir;
+}
+
+AMD::Vec4 &Light_Src::get_light_clr() { 
+
+    return this->light_color;
+}
+
+float &Light_Src::get_light_sat() { 
+    return this->sat;
 }
 
 
-void Projection::reset(){
-    for (int i = 0; i< 4; i++) {
-        for (int j = 0; j < 4; j++) {
-            if (i == j){
-                Proj_mat[i][j] = 1.0;
-            }
-            else{Proj_mat[i][j] = 0.0;}
-        }
-    }
+
+float* Light_Src::get_src_ptr(){
+    return light_src_dir.get();
 }
 
+float* Light_Src::get_clr_ptr(){
+    return light_color.get();
+}
+
+float* Light_Src::get_sat_ptr(){
+    return &sat;
+}

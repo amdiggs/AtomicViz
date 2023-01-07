@@ -7,33 +7,41 @@
 
 #ifndef Texture_hpp
 #define Texture_hpp
-#define IW 64
+#define IW 128
+
+
+
 #include <stdio.h>
 #include "Render.hpp"
 #include "My_Types.hpp"
 
 class Atom;
-
+class Shader;
+const std::string SRCS =  "/Users/diggs/Desktop/OpenGL/OTHER/";
 class Texture{
 private:
-    unsigned int m_ID;
-    unsigned int m_TBO;
-    unsigned int m_TEX_ID;
+    enum Tex_Type{Noise = 1, Gaussian, Image};
+    unsigned int m_ID[10];
     GLenum m_type = GL_TEXTURE_2D;
-    GLubyte RGB_Data[IW][IW][3];
-    GLubyte RGBA_Data[IW][IW][4];
-    GLfloat TBData[500][3];
+    void Gen_Tex_2D(int layer, void* dat, int rows, int cols);
+    int m_count = 0;
     
     
 public:
     Texture();
-    Texture(Atom* ats);
+    
     ~Texture();
     
-    void bind(int layer);
-    void Checker_Board();
-    void Noise();
-    void Off_set(Atom* ats);
+    void Bind(int layer);
+    void UnBind();
+    void Gen_Noise(int layer);
+    void Gen_Gauss(int layer);
+    void Image_Texture(int layer,std::string image);
+    void Image_Texture_RGB(int layer,std::string image);
+    
+    
+    int Get_ID(int layer);
+    
     
     
     
@@ -63,6 +71,15 @@ private:
 
 };
 
-
-
+float Letter_Check(int i, int j, char let);
+void X_hat(GLubyte (*dat)[128][4]);
+void Y_hat(GLubyte (*dat)[128][4]);
+void Z_hat(GLubyte (*dat)[128][4]);
 #endif /* Texture_hpp */
+
+
+//void bind_multi(int layer);
+//void axis_texture(int layer,const Shader& sh);
+//void Off_set(Atom* ats,const Shader& sh);
+//void Gen_Gaussian(int layer,const Shader& sh);
+

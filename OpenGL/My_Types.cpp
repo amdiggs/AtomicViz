@@ -188,6 +188,12 @@ void AMD::Vec3::print(){
 }
 
 
+void AMD::Vec3::Reset(){
+    x = 0.0;
+    y = 0.0;
+    z = 0.0;
+}
+
 Vec4::Vec4()
 :r(0.0) , g(0.0) , b(0.0) , a(0.0)
 {}
@@ -199,6 +205,9 @@ Vec4::Vec4(float e_r, float e_g, float e_b, float e_a)
 Vec4::Vec4(float* e_vec)
 :r(e_vec[0]), g(e_vec[1]), b(e_vec[2]), a(e_vec[3]){}
 
+Vec4::Vec4(AMD::Vec3 vec)
+:r(vec[0]), g(vec[1]), b(vec[2]), a(1.0){}
+
 float* Vec4::get(){
     return &r;
 }
@@ -208,10 +217,162 @@ float& Vec4::operator[](const int& index){
     return get()[index];
 }
 
+AMD::Vec4 Vec4::operator+(const Vec4& other) const{
+    
+    float _x = this->r + other.r;
+    float _y = this->g + other.g;
+    float _z = this->b + other.b;
+    float _w = this->a + other.a;
+    return Vec4(_x,_y,_z, _w);
+    }
+
+void AMD::Vec4::Reset(){
+    r = 0.0;
+    g = 0.0;
+    b = 0.0;
+    a = 0.0;
+}
+
+//==============MATRICIES==========================================
+
+Mat3::Mat3() {
+    for (int i = 0; i< 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            if (i == j){
+                m[i][j] = 1.0;
+            }
+            else{m[i][j] = 0.0;}
+        }
+    }
+}
+
+float *Mat3::operator[](const int &index) {
+    return m[index];
+}
+
+AMD::Mat3 &Mat3::operator=(const AMD::Mat3 &other) {
+    if(this == &other){ return  *this;}
+    else{
+        for (int i = 0; i< 3; i++) {
+            for (int j = 0; j < 3; j++) {
+            this->m[i][j] = other.m[i][j];
+            }
+
+        }
+    
+        return *this;
+    }
+}
+
+AMD::Mat3 Mat3::add(const AMD::Mat3 &other) const {
+    Mat3 temp;
+    for (int i =0; i<n; i++){
+        for (int j = 0; j < n; j++) {
+            temp.m[i][j] = m[i][j] + other.m[i][j];
+        }
+    }
+    return temp;
+}
+
+AMD::Mat3 Mat3::operator+(const AMD::Mat3 &other) const {
+    return this->add(other);
+}
+
+AMD::Mat3 Mat3::multiply(const AMD::Mat3 &other) const {
+    Mat3 temp;
+    float el;
+    for (int col = 0; col<n; col++){
+        for (int i =0; i<n; i++){
+            el =0.0;
+            for (int j = 0; j < n; j++) {
+                el += other.m[i][j] * m[j][col];
+            }
+            temp.m[i][col] = el;
+        }
+    }
+    return temp;
+}
+
+AMD::Mat3 Mat3::operator*(const AMD::Mat3 &other) const {
+    return this->multiply(other);
+}
+
+AMD::Vec3 Mat3::multiply(AMD::Vec3 &other) const {
+    Vec3 temp;
+    for (int row = 0; row<n; row++){
+        for (int col = 0; col<n;col++){
+            temp[row] += m[col][row]*other[col];
+        }
+    }
+    return temp;
+}
+
+AMD::Vec3 Mat3::operator*(AMD::Vec3 &other) const {
+    return this->multiply(other);
+}
+
+void Mat3::assign_col(int col_idx, AMD::Vec3 col) {
+    for (int i = 0; i<n; i++){
+        m[i][col_idx] = col[i];
+    }
+}
+
+void Mat3::assign_row(int row_idx, AMD::Vec3 row) {
+    for (int i = 0; i<n; i++){
+        m[row_idx][i] = row[i];
+    }
+}
+
+void Mat3::Rotate(AMD::Vec3 ang) {
+    float a = ang.x; float b = ang.y; float c = ang.z;
+    AMD::Mat3 rot;
+    AMD::Vec3 c0 (cos(a)*cos(b),  cos(a)*sin(b)*sin(c) - sin(a)*cos(c),  cos(a)*sin(b)*cos(c)+sin(a)*sin(c));
+    AMD::Vec3 c1(sin(a)*cos(b), sin(a)*sin(b)*sin(c) + cos(a)*cos(c), sin(a)*sin(b)*cos(c)-cos(a)*sin(c));
+    AMD::Vec3 c2(-sin(b), cos(b)*sin(c), cos(b)*cos(c));
+    
+    rot.assign_col(0, c0);
+    rot.assign_col(1, c1);
+    rot.assign_col(2, c2);
+    *this = rot * (*this);
+    
+    return;
+}
+
+void Mat3::Scale(float scale) {
+    Mat3 temp;
+    temp[0][0] = scale;
+    temp[1][1] = scale;
+    temp[2][2] = scale;
+    
+    *this = temp * (*this);
+    
+    return;
+}
+
+void Mat3::Scale(AMD::Vec3 vec) {
+    
+    m[0][0] = m[0][0] * vec.x;
+    m[1][1] = m[1][1] * vec.y;
+    m[2][2] = m[2][2] * vec.z;
+    
+    
+    return;
+}
+
+void Mat3::print() {
+    std::cout <<  std::endl;
+    for (int i =0; i<n; i++){
+        for (int j = 0; j < n; j++) {
+        std::cout << m[i][j] << ", ";
+        }
+       std::cout <<  std::endl;
+    
+    }
+    std::cout <<  std::endl;
+}
 
 
-
-
+//================================================
 Mat4::Mat4(){
     for (int i = 0; i< 4; i++) {
         for (int j = 0; j < 4; j++) {
@@ -225,8 +386,8 @@ Mat4::Mat4(){
 
 AMD::Mat4 Mat4::add(const AMD::Mat4 &other) const {
     Mat4 temp;
-    for (int i =0; i<4; i++){
-        for (int j = 0; j < 4; j++) {
+    for (int i =0; i<n; i++){
+        for (int j = 0; j < n; j++) {
             temp.m[i][j] = m[i][j] + other.m[i][j];
         }
     }
@@ -239,15 +400,10 @@ AMD::Mat4 Mat4::operator+(const AMD::Mat4 &other) const {
 
 AMD::Mat4 Mat4::multiply(const AMD::Mat4 &other) const {
     Mat4 temp;
-    float el;
     for (int col = 0; col<4; col++){
-        for (int i =0; i<4; i++){
-            el =0.0;
-            for (int j = 0; j < 4; j++) {
-                el += other.m[i][j] * m[j][col];
-            }
-            temp.m[i][col] = el;
-        }
+        AMD::Vec4 Oth_Col = other.Get_Col(col);
+        AMD::Vec4 Temp_Col = multiply(Oth_Col);
+        temp.assign_col(col, Temp_Col);
     }
     return temp;
 }
@@ -274,6 +430,10 @@ AMD::Vec4 Mat4::operator*(AMD::Vec4& other) const {
     
 }
 
+
+AMD::Vec4 Mat4::Get_Col(int col) const {
+    return AMD::Vec4(m[0][col], m[1][col], m[2][col], m[3][col]);
+}
 
 AMD::Vec3 Mat4::operator*(Vec3& other) const{
     Vec4 temp(other.x, other.y, other.z, 1.0);
@@ -336,20 +496,48 @@ void Mat4::assign_row(int row_idx, Vec4 row){
 void Mat4::Rotate(Vec3 ang){
     float a = ang.x; float b = ang.y; float c = ang.z;
     AMD::Mat4 rot;
-    AMD::Vec4 r0 (cos(a)*cos(b),  cos(a)*sin(b)*sin(c) - sin(a)*cos(c),  cos(a)*sin(b)*cos(c)+sin(a)*sin(c), 0.0);
-    AMD::Vec4 r1(sin(a)*cos(b), sin(a)*sin(b)*sin(c) + cos(a)*cos(c), sin(a)*sin(b)*cos(c)-cos(a)*sin(c), 0.0);
-    AMD::Vec4 r2(-sin(b), cos(b)*sin(c), cos(b)*cos(c), 0.0);
-    AMD::Vec4 r3(0.0, 0.0, 0.0, 1.0);
+    AMD::Vec4 c0 (cos(a)*cos(b),  cos(a)*sin(b)*sin(c) - sin(a)*cos(c),  cos(a)*sin(b)*cos(c)+sin(a)*sin(c), 0.0);
+    AMD::Vec4 c1(sin(a)*cos(b), sin(a)*sin(b)*sin(c) + cos(a)*cos(c), sin(a)*sin(b)*cos(c)-cos(a)*sin(c), 0.0);
+    AMD::Vec4 c2(-sin(b), cos(b)*sin(c), cos(b)*cos(c), 0.0);
+    AMD::Vec4 c3(0.0, 0.0, 0.0, 1.0);
     
-    rot.assign_row(0, r0);
-    rot.assign_row(1, r1);
-    rot.assign_row(2, r2);
-    rot.assign_row(3, r3);
+    rot.assign_row(0, c0);
+    rot.assign_row(1, c1);
+    rot.assign_row(2, c2);
+    rot.assign_row(3, c3);
     *this = rot * (*this);
     
     return;
 }
 
+
+
+void Mat4::Scale(AMD::Vec3 vec) {
+    Mat4 temp;
+    temp.m[0][0] = vec.x;
+    temp.m[1][1] = vec.y;
+    temp.m[2][2] = vec.z;
+    *this = temp * (*this);
+    return;
+}
+
+void Mat4::Translate(AMD::Vec3 vec) {
+    Mat4 temp;
+    Vec4 temp_vec(vec.x,vec.y,vec.z,1.0);
+    temp.assign_col(3, temp_vec);
+    *this = temp * (*this);
+    return;
+}
+
+void Mat4::Transpose(){
+    Mat4 temp = *this;
+    
+    for (int i = 0; i< 4; i++) {
+        for (int j = 0; j < 4; j++) {
+                m[i][j] = temp.m[j][i];
+        }
+    }
+}
 
 AMD::Mat4 ID(){
     return Mat4();
@@ -376,7 +564,10 @@ AMD::Mat4 AMD::ROTATION_MATRIX(Vec3 ang){
 
 float AMD::Get_angle(const Vec3& A, const Vec3& B){
     float c_th= A.dot(B)/(A.len()*B.len());
+    if (c_th < 0){
     return acos(c_th);
+    }
+    else{return acos(c_th);}
 }
 
 
@@ -425,3 +616,29 @@ void AMD::Map_Texture_Coords(Vertex* verts, int num_verts){
     
     
 }
+
+
+
+
+AMD::Vertex& Vertex::operator=(const Vertex& other){
+    if (this == &other) {
+        return *this;
+    }
+    
+    this->pos = other.pos;
+    this->clr = other.clr;
+    this->norm = other.norm;
+    this->texture = other.texture;
+    this->tex_indx = other.tex_indx;
+    
+    return  *this;
+    
+}
+
+
+AMD::Vertex Vertex::off_set(Vec3 vec){
+    this->pos = this->pos + vec;
+    return *this;
+}
+
+

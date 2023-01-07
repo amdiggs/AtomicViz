@@ -18,22 +18,24 @@
 class Atom{
 private:
     AMD::Vec3 m_coords;
-    Atom** m_neighbors;
     int m_num_neighbors;
     int m_type;
-    int m_num;
+    
     float m_rad;
-    float dx = 16.0;
-    float dy = 16.0;
-    float dz = 29.0;
     
 public:
     Atom();
     Atom(std::string line);
+    Atom(std::string line, AMD::Vec3 BB);
     ~Atom();
     
-    AMD::Vec3 get_coords();
-    
+    AMD::Vec3 get_coords() const;
+    int get_type() const;
+    void Find_Neighbors(Atom* ats);
+    int m_num;
+    float dx;
+    float dy;
+    float dz;
     
     
 };
@@ -43,22 +45,26 @@ public:
 class Bond{
 private:
 
-public:
-    
     AMD::Vec3 m_start;
     AMD::Vec3 m_end;
     AMD::Vec3 m_vec;
+    AMD::Vec3 m_ang;
     float m_len;
-    AMD::Vec3 angle;
+    
+    
+public:
     Bond();
-    Bond(Atom A, Atom B);
+    Bond(const Atom& A,const Atom& B);
     ~Bond();
+    void Set_Theta();
+    void Set_Phi();
+    void Set_Len();
     
-    
-    
-    void set_len();
-    void set_angles();
-    
+    AMD::Vec3 get_off_set();
+    AMD::Vec3& get_angles();
+    AMD::Vec2& get_types();
+    AMD::Vec2 m_types;
+    float get_len();
     
 };
 

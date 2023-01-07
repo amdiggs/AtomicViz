@@ -19,9 +19,11 @@
 
 
 #define _2pi 6.283185307
-
+#define PI 3.141592654
 #define PI_2 1.5707963
 
+#define MAX_VERTS 10000
+#define MAX_IDX 50000
 
 
 
@@ -29,41 +31,38 @@
 
 
 class SHAPE{
-private:
-    static const unsigned int max_verts = 10000;
-    static const unsigned int max_indices = 50000;
 protected:
     int m_num_idx;
     int m_num_verts;
+    const int m_num_theta = 60;
+    const float m_dth = _2pi/m_num_theta;
+    void Gen_cyl_index(int off_set);
+    void Gen_fan_index(int count, int tip);
 public:
     SHAPE();
-    ~SHAPE();
-    AMD::Vertex verts[max_verts];
-    unsigned int indices[max_indices];
-    int num_idx();
-    int num_verts();
+    virtual ~SHAPE() = 0;
+    AMD::Vertex verts[MAX_VERTS];
+    unsigned int indices[MAX_IDX];
+    int num_idx() const ;
+    int num_verts() const;
+    virtual void Gen_points() = 0;
+    virtual void Gen_indices() = 0;
     
     
 };
 
 
 
-class Circle{
+class Circle: public SHAPE{
 private:
-    size_t m_i_size;
-    size_t m_p_size;
-    
-public:
-    unsigned int num_points;
     float rad;
-    AMD::Vec3* points;
-    unsigned int* indices;
-    Circle(float ex_rad, unsigned int num);
+    void Gen_points() override;
+    void Gen_indices() override;
+public:
+    Circle(float ex_rad);
     ~Circle();
     
-    void Gen_points();
-    void Gen_indices();
-    size_t get_size(char typ);
+
     
 };
 
@@ -71,16 +70,17 @@ public:
 
 class Cube{
 private:
-    unsigned int num_points = 8;
     int m_num_idx = 36;
     int m_num_verts = 8;
+    AMD::Vec3 m_lengths;
 
-    void set_verts();
+    void Gen_Points();
     
     
     
 public:
     Cube();
+    Cube(AMD::Vec3 BB);
     ~Cube();
     AMD::Vertex verts[8];
     unsigned int indices[36] = {
@@ -112,15 +112,20 @@ public:
     
 };
 
-class Triangle{
+class Quad{
 private:
     void gen_verts();
-    int m_num_verts = 3;
-    int m_num_idx = 3;
+    void gen_verts(AMD::Vec3 A, AMD::Vec3 B, AMD::Vec3 C, AMD::Vec3 D);
+    int m_num_verts = 4;
+    int m_num_idx = 6;
+    float m_size;
 public:
-    Triangle();
-    AMD::Vertex verts[3];
-    unsigned int indices[3] = {0,1,2};
+    Quad();
+    Quad(float s);
+    Quad(AMD::Vec3 A, AMD::Vec3 B, AMD::Vec3 C, AMD::Vec3 D, const char* cw);
+    
+    AMD::Vertex verts[4];
+    unsigned int indices[6] = {0,1,2,0,2,3};
     int num_idx();
     int num_verts();
 };
@@ -128,24 +133,15 @@ public:
 
 
 
-class Sphere{
+class Sphere : public SHAPE{
 private:
-    static const unsigned int max_verts = 10000;
-    static const unsigned int max_indices = 50000;
     float rad;
-    unsigned int num_p;
-    int m_num_idx;
-    int m_num_verts;
-    void gen_points();
-    void gen_indices();
+    void Gen_points() override;
+    void Gen_indices() override;
     
 public:
-    Sphere(float e_rad, unsigned int e_num_p);
+    Sphere(float e_rad);
     ~Sphere();
-    AMD::Vertex verts[max_verts];
-    unsigned int indices[max_indices];
-    int num_idx();
-    int num_verts();
     
     AMD::Vec4 m_clr;
     
@@ -155,11 +151,89 @@ public:
 
 
 
+
+class Cylinder: public SHAPE{
+private:
+    float m_dz;
+    float m_rad;
+    float m_len;
+    void Gen_points() override;
+    void Gen_indices() override;
+    
+    
+public:
+    Cylinder(float e_len);
+    Cylinder();
+    ~Cylinder();
+    
+};
+
+
+class Cylinder2: public SHAPE{
+
+private:
+    float m_rad;
+    float m_len;
+    void Gen_points() override;
+    void Gen_indices() override;
+    
+    
+public:
+    Cylinder2(float e_len);
+    Cylinder2();
+    ~Cylinder2();
+};
+
+
+class Cone: public SHAPE{
+private:
+    void Gen_points() override;
+    void Gen_indices() override;
+    
+    
+public:
+    Cone();
+    ~Cone();
+    
+    
+    
+};
+
+
+
+class Arrow: public SHAPE {
+    
+private:
+    float m_length;
+    int m_num_z;
+    float text_id;
+    AMD::Vec4 m_color;
+    AMD::Mat4 r_mat;
+    AMD::Mat4 label_rot_mat;
+    AMD::Vec3 delta;
+    void Gen_points() override;
+    void Gen_indices() override;
+    void Gen_Quad();
+    void Coordinate_Transform();
+    void Rotation();
+    
+    
+public:
+    Arrow(char color);
+    Arrow(char color, char dir);
+    Arrow(char color, char dir, float len);
+    ~Arrow();
+    
+};
+
+
 class Grid{
     
 private:
     static const unsigned int max_verts = 50000;
     static const unsigned int max_indices = 250000;
+    float m_w;
+    float m_h;
     float m_spacing;
     int m_num_points;
     int m_num_line_idx;
@@ -183,71 +257,19 @@ public:
 };
 
 
-
-
-
-class Cylinder{
+class Axis{
+    
 private:
-    static const unsigned int max_verts = 10000;
-    static const unsigned int max_indices = 50000;
-    const int m_num_theta = 20;
-    float m_dz = 0.1;
-    float m_dth = 0.314159;
-    float m_rad;
-    int m_num_idx;
-    int m_num_verts;
-    void gen_points();
-    void gen_indices();
-    
-    float m_len;
-    
-public:
-    Cylinder(float e_len, int e_num_th, int e_num_h);
-    Cylinder();
-    ~Cylinder();
-    AMD::Vertex verts[max_verts];
-    unsigned int indices[max_indices];
-    int num_idx();
-    int num_verts();
-    
-};
-
-
-class Cone{
-private:
-    static const unsigned int max_verts = 10000;
-    static const unsigned int max_indices = 50000;
+    static const unsigned int max_verts = 20000;
+    static const unsigned int max_indices = 150000;
     const int m_num_theta = 20;
     int m_num_idx;
     int m_num_verts;
-    void gen_points();
-    void gen_indices();
-    
-    
-public:
-    Cone();
-    ~Cone();
-    AMD::Vertex verts[max_verts];
-    unsigned int indices[max_indices];
-    int num_idx();
-    int num_verts();
-    
-    
-    
-};
-
-
-
-class Arrow {
-    
-private:
-    static const unsigned int max_verts = 10000;
-    static const unsigned int max_indices = 50000;
-    const int m_num_theta = 20;
-    int m_num_idx;
-    int m_num_verts;
-    void gen_points();
-    void gen_indices();
+    void gen_points(const Arrow& ar);
+    void gen_points(const Sphere& sp);
+    void gen_quad();
+    void Gen_Sphere();
+    void Gen_Arrow(char axis);
     AMD::Vec4 m_color;
     AMD::Mat4 r_mat;
     void Coordinate_Transform();
@@ -255,17 +277,13 @@ private:
     
     
 public:
-    Arrow(char color);
-    Arrow(char color, char dir);
-    ~Arrow();
+    Axis();
+    ~Axis();
     AMD::Vertex verts[max_verts];
     unsigned int indices[max_indices];
     int num_idx();
     int num_verts();
-    
-    
 };
-
 
 void ReadXYZ(std::string in_file, AMD::Vertex* verts, int& num_verts);
 AMD::Vec3 Normed_average(AMD::Vec3 Va, AMD::Vec3 Vb);
