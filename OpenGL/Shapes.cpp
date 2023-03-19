@@ -11,7 +11,7 @@
 using namespace AMD;
 
 
-const Mat4 CT = ROTATION_MATRIX(Vec3(0.0, 0.0, -PI_2));
+const Mat4 CT = ROTATION_MATRIX(Vec3(0.0, 0.0, halfPI));
 
 
 
@@ -157,7 +157,13 @@ Cube::Cube()
     AMD::Compute_norms(verts, indices, m_num_idx);
     }
 
-
+Cube::Cube(float len)
+:m_lengths(len)
+{
+Gen_Points();
+AMD::Compute_norms(verts, indices, m_num_idx);
+}
+    
 
 Cube::Cube(AMD::Vec3 BB)
 :m_lengths(BB)
@@ -170,7 +176,9 @@ Cube::~Cube(){}
 
 
 void Cube::Gen_Points(){
-    float dx = 0.5*m_lengths.x + 0.1; float dy = 0.5*m_lengths.y + 0.1; float dz = 0.5*m_lengths.z + 0.1;
+    float dx = 0.5*m_lengths.x; float dy = 0.5*m_lengths.y; float dz = 0.5*m_lengths.z;
+    
+    
     verts[0].pos = Vec3(-1.0 * dx ,-1.0 * dy, 1.0 * dz);
     verts[1].pos = Vec3(1.0 * dx ,-1.0 * dy, 1.0 * dz);
     verts[2].pos = Vec3(1.0 * dx ,1.0 * dy, 1.0 * dz);
@@ -178,8 +186,13 @@ void Cube::Gen_Points(){
     
     verts[0].texture[0] = 0.0; verts[0].texture[1] = 0.0;
     verts[1].texture[0] = 1.0; verts[1].texture[1] = 0.0;
-    verts[2].texture[0] = 1.0; verts[2].texture[1] = 1.0;
+    verts[2].texture[0] = 1.0; verts[2].texture[1] =1.0;
     verts[3].texture[0] = 0.0; verts[3].texture[1] = 1.0;
+    //
+    verts[0].tex_indx = 0.0;
+    verts[1].tex_indx = 0.0;
+    verts[2].tex_indx = 0.0;
+    verts[3].tex_indx = 0.0;
     //
     verts[4].pos = Vec3(-1.0 * dx ,-1.0 * dy, -1.0 * dz);
     verts[5].pos = Vec3(1.0 * dx ,-1.0 * dy, -1.0 * dz);
@@ -187,34 +200,63 @@ void Cube::Gen_Points(){
     verts[7].pos = Vec3(-1.0 * dx , 1.0 * dy, -1.0 * dz);
     
     
-    verts[4].texture[0] = 0.0; verts[4].texture[1] = 1.0;
-    verts[5].texture[0] = 1.0; verts[5].texture[1] = 1.0;
-    verts[6].texture[0] = 1.0; verts[6].texture[1] = 0.0;
-    verts[7].texture[0] = 0.0; verts[7].texture[1] = 0.0;
+    verts[4].texture[0] = 0.0; verts[4].texture[1] = 0.0;
+    verts[5].texture[0] = 1.0; verts[5].texture[1] = 0.0;
+    verts[6].texture[0] = 1.0; verts[6].texture[1] = 1.0;
+    verts[7].texture[0] = 0.0; verts[7].texture[1] = 1.0;
     
-    for (int i = 0; i<8; i++){
+    verts[4].tex_indx = 1.0;
+    verts[5].tex_indx = 1.0;
+    verts[6].tex_indx = 1.0;
+    verts[7].tex_indx = 1.0;
+    
+    /*
+    verts[8].pos = Vec3(-1.0 * dx ,-1.0 * dy, 1.0 * dz);
+    verts[9].pos = Vec3(-1.0 * dx ,1.0 * dy, 1.0 * dz);
+    
+    verts[8].texture[0] = 4.0*frac; verts[8].texture[1] = 0.0;
+    verts[9].texture[0] = 4.0*frac; verts[9].texture[1] = 1.0;
+    
+    
+    verts[10].pos = Vec3(1.0 * dx ,1.0 * dy, 1.0 * dz);
+    verts[11].pos = Vec3(1.0 * dx ,1.0 * dy, -1.0 * dz);
+    verts[12].pos = Vec3(-1.0 * dx ,1.0 * dy, -1.0 * dz);
+    verts[13].pos = Vec3(-1.0 * dx , 1.0 * dy, 1.0 * dz);
+    
+    verts[10].texture[0] = 5.0*frac; verts[10].texture[1] = 0.0;
+    verts[11].texture[0] = 4.0*frac; verts[11].texture[1] = 0.0;
+    verts[12].texture[0] = 4.0*frac; verts[12].texture[1] =1.0;
+    verts[13].texture[0] = 5.0*frac; verts[13].texture[1] = 1.0;
+    
+    
+    verts[14].pos = Vec3(1.0 * dx ,-1.0 * dy, 1.0 * dz);
+    verts[15].pos = Vec3(1.0 * dx ,-1.0 * dy, -1.0 * dz);
+    verts[16].pos = Vec3(-1.0 * dx ,-1.0 * dy, -1.0 * dz);
+    verts[17].pos = Vec3(-1.0 * dx , -1.0 * dy, 1.0 * dz);
+    
+    verts[14].texture[0] = 5.0*frac; verts[14].texture[1] = 0.0;
+    verts[15].texture[0] = 6.0*frac; verts[15].texture[1] = 0.0;
+    verts[16].texture[0] = 6.0*frac; verts[16].texture[1] =1.0;
+    verts[17].texture[0] = 5.0*frac; verts[17].texture[1] = 1.0;
+    */
+    for (int i = 0; i<m_num_verts; i++){
         verts[i].clr = Vec4(0.6, 0.2, 0.4, 1.0);
         
     }
     
 }
 /*
- 
- glTexCoord2f(0.0f, 0.0f); glVertex3f(-1.0f, -1.0f, -1.0f);
- glTexCoord2f(1.0f, 0.0f); glVertex3f(-1.0f, -1.0f,  1.0f);
- glTexCoord2f(1.0f, 1.0f); glVertex3f(-1.0f,  1.0f,  1.0f);
- glTexCoord2f(0.0f, 1.0f); glVertex3f(-1.0f,  1.0f, -1.0f);
       7-------6
-     /|       /
+     /|      |/
     / |      /
-   3--|-----2
+  3,9-------2|
    |  4------5
-   |       |
-   0-------1
+   | /       /
+  0,8-------1
  
  
-    {0,1,2}, {0,2,3}, {0,1,4}, {1,4,5},
-    {2,3,7}, {2,6,7}, {1,2,5}, {1,5,6},
+    {0,1,2}, {2,3,0}, {1,5,6}, {6,2,1},
+    {5,4,7}, {7,6,5}, {4,8,9}, {9,7,4},
     {0,3,4}, {3,4,7}, {4,5,6}, {4,6,7}
  */
 int Cube::num_idx(){
@@ -226,11 +268,232 @@ int Cube::num_verts(){
 }
 
 
+//========Volume class for drawing volume data===================================
+Volume_XY::Volume_XY(AMD::Vec3 dim, int num_slices)
+:m_dimensions(dim), m_num_verts(4*num_slices), m_num_idx(6*num_slices)
+{
+    Gen_Verts(num_slices);
+    AMD::Compute_norms(verts, indices, m_num_idx);
+}
+
+Volume_XY::Volume_XY(float w, float h, float d, int num_slices)
+:m_dimensions(w,h,d), m_num_verts(4*num_slices), m_num_idx(6*num_slices)
+{
+    Gen_Verts(num_slices);
+    AMD::Compute_norms(verts, indices, m_num_idx);
+}
 
 
 
+Volume_XY::~Volume_XY(){}
+
+void Volume_XY::Gen_Verts(int num_slices){
+    float dz = m_dimensions.z / (float)num_slices;
+    float x = m_dimensions.x/2.0;
+    float y = m_dimensions.y/2.0;
+    float z = m_dimensions.z / 2.0;
+    unsigned int count = 0;
+    float tz = 0.0;
+    float dtz = dz/m_dimensions.z;
+    for (int i = 0; i< num_slices; i++){
+        verts[count + 0].pos = Vec3(-x,-y, z);
+        verts[count + 1].pos = Vec3(x,-y, z);
+        verts[count + 2].pos = Vec3(x, y, z);
+        verts[count + 3].pos = Vec3(-x,y, z);
+        
+        
+        verts[count + 0].clr = Vec4(0.3,0.0,0.8,1.0);
+        verts[count + 1].clr = Vec4(0.3,0.0,0.8,1.0);
+        verts[count + 2].clr = Vec4(0.3,0.0,0.8,1.0);
+        verts[count + 3].clr = Vec4(0.3,0.0,0.8,1.0);
+        
+        verts[count + 0].texture = Vec2(0.0,0.0);
+        verts[count + 1].texture = Vec2(1.0,0.0);
+        verts[count + 2].texture = Vec2(1.0,1.0);
+        verts[count + 3].texture = Vec2(0.0,1.0);
+        
+        
+        verts[count + 0].tex_indx = tz;
+        verts[count + 1].tex_indx = tz;
+        verts[count + 2].tex_indx = tz;
+        verts[count + 3].tex_indx = tz;
+        
+        count += 4;
+        z -= dz;
+        tz += dtz;
+    }
+    
+    count = 0;
+    int v_num = 0;
+    for (int i = 0; i<num_slices; i++){
+        
+        indices[count + 0] = v_num + 0;
+        indices[count + 1] = v_num + 1;
+        indices[count + 2] = v_num + 2;
+        indices[count + 3] = v_num + 2;
+        indices[count + 4] = v_num + 3;
+        indices[count + 5] = v_num + 0;
+        count += 6;
+        v_num+=4;
+        
+    }
+    
+}
+
+int Volume_XY::num_idx(){
+    return m_num_idx;
+}
+
+int Volume_XY::num_verts(){
+    return m_num_verts;
+}
+
+
+
+//========Volume class for drawing volume data===================================
+Volume_XZ::Volume_XZ(AMD::Vec3 dim, int num_slices)
+:m_dimensions(dim), m_num_verts(4*num_slices), m_num_idx(6*num_slices)
+{
+    Gen_Verts(num_slices);
+    AMD::Compute_norms(verts, indices, m_num_idx);
+}
+
+Volume_XZ::Volume_XZ(float w, float h, float d, int num_slices)
+:m_dimensions(w,h,d), m_num_verts(4*num_slices), m_num_idx(6*num_slices)
+{
+    Gen_Verts(num_slices);
+    AMD::Compute_norms(verts, indices, m_num_idx);
+}
+
+
+
+Volume_XZ::~Volume_XZ(){}
+
+void Volume_XZ::Gen_Verts(int num_slices){
+    float dy = m_dimensions.y / (float)num_slices;
+    float x = m_dimensions.x/2.0;
+    float y = -m_dimensions.y/2.0;
+    float z = m_dimensions.z / 2.0;
+    unsigned int count = 0;
+    float ty = 0.0;
+    float dty = dy/m_dimensions.y;
+    for (int i = 0; i< num_slices; i++){
+        verts[count + 0].pos = Vec3(-x, y, -z);
+        verts[count + 1].pos = Vec3(x, y, -z);
+        verts[count + 2].pos = Vec3(x, y, z);
+        verts[count + 3].pos = Vec3(-x, y, z);
+        
+        
+        verts[count + 0].clr = Vec4(0.3,0.0,0.8,1.0);
+        verts[count + 1].clr = Vec4(0.3,0.0,0.8,1.0);
+        verts[count + 2].clr = Vec4(0.3,0.0,0.8,1.0);
+        verts[count + 3].clr = Vec4(0.3,0.0,0.8,1.0);
+        
+        verts[count + 0].texture = Vec2(0.0,0.0);
+        verts[count + 1].texture = Vec2(1.0,0.0);
+        verts[count + 2].texture = Vec2(1.0,1.0);
+        verts[count + 3].texture = Vec2(0.0,1.0);
+        
+        
+        verts[count + 0].tex_indx = ty;
+        verts[count + 1].tex_indx = ty;
+        verts[count + 2].tex_indx = ty;
+        verts[count + 3].tex_indx = ty;
+        
+        count += 4;
+        y += dy;
+        ty += dty;
+    }
+    
+    count = 0;
+    int v_num = 0;
+    for (int i = 0; i<num_slices; i++){
+        
+        indices[count + 0] = v_num + 0;
+        indices[count + 1] = v_num + 1;
+        indices[count + 2] = v_num + 2;
+        indices[count + 3] = v_num + 2;
+        indices[count + 4] = v_num + 3;
+        indices[count + 5] = v_num + 0;
+        count += 6;
+        v_num+=4;
+        
+    }
+    
+}
+
+int Volume_XZ::num_idx(){
+    return m_num_idx;
+}
+
+int Volume_XZ::num_verts(){
+    return m_num_verts;
+}
+
+
+
+
+
+//========Volume class for drawing volume data===================================
+Voxel_Grid::Voxel_Grid(AMD::Vec3 dim, int num_y, int num_z)
+:m_dimensions(dim), m_num_y(num_y), m_num_z(num_z)
+{
+    Gen_Verts();
+    AMD::Compute_norms(verts, indices, m_num_idx);
+}
+
+Voxel_Grid::Voxel_Grid(float w, float h, float d, int num_y, int num_z)
+:m_dimensions(w,h,d), m_num_y(num_y), m_num_z(num_z)
+{
+    Gen_Verts();
+    AMD::Compute_norms(verts, indices, m_num_idx);
+}
+
+
+
+Voxel_Grid::~Voxel_Grid(){}
+
+void Voxel_Grid::Gen_Verts(){
+    int v_count = 0;
+    Volume_XY v1(m_dimensions, m_num_z);
+    Volume_XZ v2(m_dimensions, m_num_y);
+    for (int i = 0; i< v1.num_verts(); i++){
+        this->verts[v_count] = v1.verts[i];
+        v_count ++;
+    }
+    for (int i = 0; i< v2.num_verts(); i++){
+        this->verts[v_count] = v2.verts[i];
+        v_count ++;
+    }
+    m_num_verts = v_count;
+    int i_count = 0;
+    for (int i = 0; i< v1.num_idx(); i++){
+        this->indices[i_count] = v1.indices[i];
+        i_count ++;
+    }
+    int off_set = v1.num_verts();
+    for (int i = 0; i< v2.num_idx(); i++){
+        this->indices[i_count] = v2.indices[i] + off_set;
+        i_count ++;
+    }
+    m_num_idx = i_count;
+}
+
+
+int Voxel_Grid::num_idx(){
+    return m_num_idx;
+}
+
+int Voxel_Grid::num_verts(){
+    return m_num_verts;
+}
+
+
+
+
+//===========================================================
 Quad::Quad()
-:m_size(1.0)
+:m_size(2.0)
 {
     gen_verts();
 }
@@ -362,7 +625,7 @@ void Sphere::Gen_points(){
             verts[m_num_verts].clr = m_clr;
             verts[m_num_verts].norm = Vec3(x,y,z);
             verts[m_num_verts].texture[0] = theta/3.14; verts[m_num_verts].texture[1] = phi/6.28;
-            verts[m_num_verts].tex_indx = 0.0;
+            verts[m_num_verts].tex_indx = cos(theta)*cos(theta);
             m_num_verts ++;
             }
         theta-=m_dth;
@@ -723,8 +986,131 @@ Cone::~Cone() {}
 
 
 
+Arrow::Arrow(char color)
+:m_num_z(20){
+    switch (color) {
+        case 'r':
+            m_color = Vec4(1.0,0.0,0.0,1.0);
+            break;
+        case 'g':
+            m_color = Vec4(0.0,1.0,0.0,1.0);
+            break;
+            
+        case 'b':
+            m_color = Vec4(0.0,0.0,1.0,1.0);
+            break;
+            
+        default:
+            break;
+    }
+    
+    Gen_points();
+    Gen_indices();
+    AMD::Compute_norms(this->verts, this->indices, m_num_idx);
+    //Coordinate_Transform();
+}
+
+Arrow::Arrow(char color, char dir)
+: m_length(3.0), m_num_z(30){
+    switch (color) {
+        case 'r':
+            m_color = Vec4(1.0,0.0,0.0,1.0);
+            break;
+        case 'g':
+            m_color = Vec4(0.0,1.0,0.0,1.0);
+            break;
+            
+        case 'b':
+            m_color = Vec4(0.0,0.0,1.0,1.0);
+            break;
+            
+        default:
+            break;
+    }
+    
+    switch (dir) {
+        case 'x':
+            r_mat = ROTATION_MATRIX(AMD::Vec3(0.0, halfPI, 0.0));
+            break;
+        
+        case 'y':
+            r_mat = ROTATION_MATRIX(AMD::Vec3(0.0, 0.0, -halfPI));
+            break;
+            
+        case 'z':
+            r_mat = ROTATION_MATRIX(AMD::Vec3(0.0, 0.0, 0.0));
+            break;
+        default:
+            break;
+    }
+    
+    
+    Gen_points();
+    Gen_indices();
+    Gen_Quad();
+    AMD::Compute_norms(this->verts, this->indices, m_num_idx);
+    Rotation();
+    Coordinate_Transform();
+}
+
+
+Arrow::Arrow(char color, char dir, float len)
+:m_length(len), m_num_z((int)(len/0.1))
+{
+    switch (color) {
+        case 'r':
+            m_color = Vec4(0.6,0.1,0.9,1.0);
+            break;
+        case 'g':
+            m_color = Vec4(0.0,1.0,0.0,1.0);
+            break;
+            
+        case 'b':
+            m_color = Vec4(0.0,0.0,1.0,1.0);
+            break;
+            
+        default:
+            break;
+    }
+    
+    switch (dir) {
+        case 'x':
+            r_mat = ROTATION_MATRIX(AMD::Vec3(0.0, halfPI, 0.0));
+            label_rot_mat = ROTATION_MATRIX(Vec3(0.0, halfPI, 0.0));
+            text_id =2.0;
+            break;
+        
+        case 'y':
+            r_mat = ROTATION_MATRIX(AMD::Vec3(0.0, 0.0, -halfPI));
+            label_rot_mat = ROTATION_MATRIX(Vec3(0.0, halfPI,halfPI));
+            text_id =3.0;
+            break;
+            
+        case 'z':
+            r_mat = ROTATION_MATRIX(AMD::Vec3(0.0, 0.0, 0.0));
+            label_rot_mat = ROTATION_MATRIX(Vec3(0.0, halfPI, 0.0));
+            text_id =4.0;
+            break;
+        default:
+            break;
+    }
+    
+    
+    Gen_points();
+    Gen_indices();
+    Gen_Quad();
+    AMD::Compute_norms(this->verts, this->indices, m_num_idx);
+    Rotation();
+    Coordinate_Transform();
+}
+
+Arrow::~Arrow() {}
+
+
+
+
 void Arrow::Gen_points() {
-    float r; float _z = 0.0; float dz = 0.1;
+    float r = 0.25; float _z = 0.0; float dz = 0.1;
     float theta;
     int count = 0;
     float _x, _y, _z_start;
@@ -732,8 +1118,6 @@ void Arrow::Gen_points() {
 
     for (int i =0; i < m_num_z; i++){
         theta = 0.0;
-        if(!(i%10)){r = 0.5;}
-        else{r=0.1;}
         for (int j = 0; j < m_num_theta; j++) {
             _x = r*cos(theta);
             _y = r* sin(theta);
@@ -831,126 +1215,6 @@ void Arrow::Gen_indices() {
     m_num_idx = count;
 }
 
-Arrow::Arrow(char color) { 
-    switch (color) {
-        case 'r':
-            m_color = Vec4(1.0,0.0,0.0,1.0);
-            break;
-        case 'g':
-            m_color = Vec4(0.0,1.0,0.0,1.0);
-            break;
-            
-        case 'b':
-            m_color = Vec4(0.0,0.0,1.0,1.0);
-            break;
-            
-        default:
-            break;
-    }
-    
-    Gen_points();
-    Gen_indices();
-    AMD::Compute_norms(this->verts, this->indices, m_num_idx);
-    //Coordinate_Transform();
-}
-
-Arrow::Arrow(char color, char dir)
-: m_length(3.0), m_num_z(30){
-    switch (color) {
-        case 'r':
-            m_color = Vec4(1.0,0.0,0.0,1.0);
-            break;
-        case 'g':
-            m_color = Vec4(0.0,1.0,0.0,1.0);
-            break;
-            
-        case 'b':
-            m_color = Vec4(0.0,0.0,1.0,1.0);
-            break;
-            
-        default:
-            break;
-    }
-    
-    switch (dir) {
-        case 'x':
-            r_mat = ROTATION_MATRIX(AMD::Vec3(0.0, PI_2, 0.0));
-            break;
-        
-        case 'y':
-            r_mat = ROTATION_MATRIX(AMD::Vec3(0.0, 0.0, -PI_2));
-            break;
-            
-        case 'z':
-            r_mat = ROTATION_MATRIX(AMD::Vec3(0.0, 0.0, 0.0));
-            break;
-        default:
-            break;
-    }
-    
-    
-    Gen_points();
-    Gen_indices();
-    Gen_Quad();
-    AMD::Compute_norms(this->verts, this->indices, m_num_idx);
-    Rotation();
-    Coordinate_Transform();
-}
-
-
-Arrow::Arrow(char color, char dir, float len)
-:m_length(len), m_num_z((int)(len/0.1))
-{
-    switch (color) {
-        case 'r':
-            m_color = Vec4(0.6,0.1,0.9,1.0);
-            break;
-        case 'g':
-            m_color = Vec4(0.0,1.0,0.0,1.0);
-            break;
-            
-        case 'b':
-            m_color = Vec4(0.0,0.0,1.0,1.0);
-            break;
-            
-        default:
-            break;
-    }
-    
-    switch (dir) {
-        case 'x':
-            r_mat = ROTATION_MATRIX(AMD::Vec3(0.0, PI_2, 0.0));
-            label_rot_mat = ROTATION_MATRIX(Vec3(0.0, PI_2, 0.0));
-            text_id =2.0;
-            break;
-        
-        case 'y':
-            r_mat = ROTATION_MATRIX(AMD::Vec3(0.0, 0.0, -PI_2));
-            label_rot_mat = ROTATION_MATRIX(Vec3(0.0, PI_2,PI_2));
-            text_id =3.0;
-            break;
-            
-        case 'z':
-            r_mat = ROTATION_MATRIX(AMD::Vec3(0.0, 0.0, 0.0));
-            label_rot_mat = ROTATION_MATRIX(Vec3(0.0, PI_2, 0.0));
-            text_id =4.0;
-            break;
-        default:
-            break;
-    }
-    
-    
-    Gen_points();
-    Gen_indices();
-    Gen_Quad();
-    AMD::Compute_norms(this->verts, this->indices, m_num_idx);
-    Rotation();
-    Coordinate_Transform();
-}
-
-Arrow::~Arrow() {}
-
-
 
 
 
@@ -995,68 +1259,6 @@ void Arrow::Gen_Quad(){
 
 //###########END of SHAPES#############################################
 
-void Axis::gen_points(const Arrow& ar) {
-    int off_set_verts = m_num_verts;
-    int off_set_indx = m_num_idx;
-    int V_index, I_index;
-    for (int i = 0; i<ar.num_verts(); i++){
-        V_index = off_set_verts + i;
-        verts[m_num_verts] = ar.verts[i];
-        verts[m_num_verts].clr = m_color;
-        m_num_verts++;
-    }
-    
-    for (int j = 0; j < ar.num_idx(); j++){
-        I_index = off_set_indx + j;
-        indices[m_num_idx] = ar.indices[j] + off_set_verts;
-        m_num_idx++;
-    }
-}
-
-
-void Axis::gen_points( const Sphere& sp) {
-    int off_set_verts = m_num_verts;
-    int off_set_indx = m_num_idx;
-    int V_index, I_index;
-    for (int i = 0; i<sp.num_verts(); i++){
-        V_index = off_set_verts + i;
-        verts[m_num_verts] = sp.verts[i];
-        verts[m_num_verts].clr = m_color;
-        m_num_verts++;
-    }
-    
-    for (int j = 0; j < sp.num_idx(); j++){
-        I_index = off_set_indx + j;
-        indices[m_num_idx] = sp.indices[j] + off_set_verts;
-        m_num_idx++;
-    }
-}
-
-void Axis::gen_quad(){
-    Quad qd(1.0);
-    int off_set_verts = m_num_verts;
-    AMD::Vec3 delta[3] = {Vec3(-2.0, 0.5, 0.0),Vec3(0.5, 2.0, 0.0),Vec3(0.0, 0.5, -2.0)};
-    AMD::Vec4 cl[3] = {Vec4(1.0, 0.0, 0.0, 1.0),Vec4(0.0, 1.0, 0.0, 1.0),Vec4(0.0, 0.0, 1.0, 1.0)};
-    for (int k = 0; k<3; k++){
-        for (int i = 0; i<qd.num_verts(); i++){
-            verts[m_num_verts] = qd.verts[i].off_set(delta[k]);
-            verts[m_num_verts].clr = cl[k];
-            m_num_verts++;
-        }
-        
-        for (int j = 0; j < qd.num_idx(); j++){
-            indices[m_num_idx] = qd.indices[j] + off_set_verts;
-            m_num_idx++;
-        }
-        off_set_verts = m_num_verts;
-    }
-    
-}
-
-void Axis::Rotation() { 
-    return;
-}
-
 Axis::Axis()
 :m_num_verts(0), m_num_idx(0)
 {
@@ -1069,14 +1271,53 @@ Axis::Axis()
     gen_points(ar_x);
     gen_points(ar_y);
     gen_points(ar_z);
-    //gen_quad();
-    AMD::Compute_norms(this -> verts, this -> indices, m_num_idx);
+    //AMD::Compute_norms(this -> verts, this -> indices, m_num_idx);
     
 }
 
 Axis::~Axis() {}
 
-    int Axis::num_idx() {
+
+
+void Axis::gen_points(const Arrow& ar) {
+    int off_set_verts = m_num_verts;
+    int off_set_indx = m_num_idx;
+    int V_index, I_index;
+    for (int i = 0; i<ar.num_verts(); i++){
+        V_index = off_set_verts + i;
+        verts[m_num_verts] = ar.verts[i];
+        //verts[m_num_verts].clr = m_color;
+        m_num_verts++;
+    }
+    
+    for (int j = 0; j < ar.num_idx(); j++){
+        I_index = off_set_indx + j;
+        indices[m_num_idx] = ar.indices[j] + off_set_verts;
+        m_num_idx++;
+    }
+}
+
+
+void Axis::gen_points(const Sphere& sp) {
+    int off_set_verts = m_num_verts;
+    int off_set_indx = m_num_idx;
+    int V_index, I_index;
+    for (int i = 0; i<sp.num_verts(); i++){
+        V_index = off_set_verts + i;
+        verts[m_num_verts] = sp.verts[i];
+        //verts[m_num_verts].clr = m_color;
+        m_num_verts++;
+    }
+    
+    for (int j = 0; j < sp.num_idx(); j++){
+        I_index = off_set_indx + j;
+        indices[m_num_idx] = sp.indices[j] + off_set_verts;
+        m_num_idx++;
+    }
+}
+
+
+int Axis::num_idx() {
     return m_num_idx;
 }
 
@@ -1086,26 +1327,7 @@ int Axis::num_verts() {
 
 
 
-void Axis::Gen_Sphere(){
-    Sphere sp(0.5);
-    int off_set_verts = m_num_verts;
-    int off_set_indx = m_num_idx;
-    int V_index, I_index;
-    for (int i = 0; i<sp.num_verts(); i++){
-        V_index = off_set_verts + i;
-        verts[m_num_verts] = sp.verts[i];
-        m_num_verts++;
-    }
-    
-    for (int j = 0; j < sp.num_idx(); j++){
-        I_index = off_set_indx + j;
-        indices[m_num_idx] = sp.indices[j] + off_set_verts;
-        m_num_idx++;
-    }
-    
-}
-
-
+//========================================================
 Grid::Grid(float e_spaceing)
 :m_spacing(e_spaceing), m_w(30.0), m_h(30.0)
 {

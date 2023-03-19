@@ -36,7 +36,7 @@ vec3 cam(mat4 mat){
 void main()
 {
 
-    gl_Position = u_MVP * vec4(v_pos ,1.0);
+    gl_Position = u_MVP * vec4(v_os + v_pos ,1.0);
     vec4 n_norm = u_Normal * vec4(v_norm, 0.0);
     data_out.g_color = v_color;
     data_out.g_t_coords = v_tex;
@@ -114,10 +114,6 @@ uniform vec3 l_src;
 uniform vec4 l_color;
 vec3 light_dir;
 
-uniform sampler2D u_Tex_Test1;
-uniform sampler2D u_Tex_Test2;
-vec4 t_color;
-vec4 t_color2;
 
 float diffuse_dot;
 float spec_dot;
@@ -176,20 +172,16 @@ void main()
 {
  
     light_dir = normalize(l_src);
-    t_color = texture(u_Tex_Test1, f_t_coords);
-    t_color2 = texture(u_Tex_Test2, f_t_coords);
-    mat3 R = ROTATION(f_norm);
-    mat3 RT = transpose(R);
-    vec3 Normal = normalize(RT*f_norm + t_color2.xyz);
-    Normal = R*t_color.xyz;
-    diffuse_dot = 0.5*dot(light_dir,Normal) + 0.5;
+    diffuse_dot = 0.5*dot(light_dir,f_norm) + 0.5;
     vec3 reflection = -reflect(light_dir,f_norm);
     
     
     spec_dot = pow(DOT_PROD(f_cam_dir, reflection),5.0);
     vec3 temp_color = diffuse_dot*(vec3(l_color.xyz) + 1.0*spec_dot*vec3(1.0));
-    color = vec4(1.0,0.0,0.0,1.0) + 1.0*spec_dot*vec4(1.0);
-    color = vec4(temp_color,1.0);
+    //color = vec4(1.0,0.0,0.0,1.0) + 1.0*spec_dot*vec4(1.0);
+    //color = vec4(temp_color,1.0);
+    float ct = abs(f_pos.x);
+    color = vec4(ct, 0.0,0.0,1.0);
 }
 
 #END

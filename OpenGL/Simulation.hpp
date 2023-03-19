@@ -35,28 +35,28 @@ private:
     IndexBuffer m_IBO;
     static AMD::Vec3 BB;
     const std::string shader_file = "/Users/diggs/Desktop/OpenGL/OpenGL/Shaders/Atom.vs";
-    unsigned int num_draws;
-    const unsigned int m_num_tex = 3; const char* uniform_text_names[10] = {"u_Texture", "u_Texture2", "u_map"};
-    
+    int m_num_atoms;
+    int neb_IDs[150000][2];
+    int num_bonds =0;
+    std::string file_name;
+    friend class Bonds;
 public:
     
-    Ensamble_Of_Atoms(std::string atomfile, Texture& tx);
+    Ensamble_Of_Atoms(std::string atomfile);
     ~Ensamble_Of_Atoms();
     void Add_Instance_Layout();
     void Bind();
     void UnBind();
-    void DrawBind();
+    void Draw(int num);
     void Bind_Texture(Texture& tx, int layer);
-    unsigned int num_idx();
+
     void Set_Op(Operator& op, Light_Src& l);
-    std::string file_name;
     void Set_texture(Texture& tx);
     void Compute_Neighbors();
-    int neb_IDs[150000][2];
-    int num_bonds =0;
     Atom* m_ats;
     AMD::Vec3 Get_Box();
     Shader m_sh;
+    unsigned int num_idx();
     
     
     
@@ -88,44 +88,25 @@ public:
     void Bind_Texture(Texture& tx, int layer);
 };
 
-
-class Grid_Mesh{
-private:
+class Floor{
+    private:
+    const std::string shader_file = "/Users/diggs/Desktop/OpenGL/OpenGL/Shaders/floor.vs";
     VertexArray m_VAO;
     IndexBuffer m_IBO;
-    Shader m_sh;
+
+    const char* Uniform_names = "u_VP";
     
 public:
-    Grid_Mesh(Texture& tx);
-    ~Grid_Mesh();
-    void DrawBind();
-    unsigned int num_idx();
-    void Set_Op(Operator& op, Light_Src& l);
-    void Bind();
-    void UnBind();
-    void Bind_Texture(Texture& tx);
-};
-
-
-
-class Box_Bounds{
-private:
-    const char* Uni[8] = {"hello","hello","hello","hello","hello","hello","hello","hello"};
-    VertexArray m_VAO;
-    IndexBuffer m_IBO;
     
-public:
-    Box_Bounds(Texture& tx, AMD::Vec3 BB);
-    ~Box_Bounds();
-    void DrawBind();
+    Shader m_sh;
+    AMD::Mat4 m_VP;
+    Floor(float y);
+    ~Floor();
     unsigned int num_idx();
-    void Set_Op(Operator& op, Light_Src& l);
     void Bind();
     void UnBind();
-    void Bind_Texture(Texture& tx);
-    Shader m_sh;
+    void Draw(Operator& op);
 };
-
 
 class Quad_Mesh{
 private:
@@ -135,40 +116,56 @@ private:
     
     
 public:
-    Quad_Mesh(Texture& tx, AMD::Vec3 bb, const char face);
+    Quad_Mesh();
+    Quad_Mesh(AMD::Vec3 LL, AMD::Vec3 LR, AMD::Vec3 UR, AMD::Vec3 UL);
     ~Quad_Mesh();
-    void DrawBind();
     unsigned int num_idx();
-    void Set_Op(Operator& op, Light_Src& l);
     void Bind();
     void UnBind();
-    void Bind_Texture(Texture& tx);
-    void Get_Face(AMD::Vec3 BB,const char choice);
-    std::string m_cw;
-    Shader m_sh;
 };
 
 class Test_Object{
 private:
-    const std::string shader_file = "/Users/diggs/Desktop/OpenGL/OpenGL/Shaders/Sphere.vs";
-    const unsigned int m_num_obj;
+    const std::string shader_file = "/Users/diggs/Desktop/OpenGL/OpenGL/Shaders/test.fs";
+    const char* m_sampler = "Env_Tex";
     VertexArray m_VAO;
     IndexBuffer m_IBO;
     Shader m_sh;
-    const unsigned int m_num_tex = 2; const char* uniform_text_names[10] = {"u_Tex_Test1","u_Tex_Test2"};
+    
+    
     
 public:
-    Test_Object(Texture& tx);
+    Test_Object();
     ~Test_Object();
-    void DrawBind();
-    void Add_Instance_Layout();
-    unsigned int num_idx();
-    unsigned int num_obj();
-    void Set_Op(Operator& op, Light_Src& l);
+    void Draw();
+    void Set_Shader(Operator& op, Light_Src& light);
     void Bind();
     void UnBind();
     void Bind_Texture(Texture& tx);
     
+};
+
+class Environment{
+private:
+    const std::string shader_file = "/Users/diggs/Desktop/OpenGL/OpenGL/Shaders/environment.vs";
+    const char* m_sampler = "Env_Tex";
+    VertexArray m_VAO;
+    IndexBuffer m_IBO;
+    
+    
+public:
+    Shader m_sh;
+    
+    Environment();
+    ~Environment();
+    
+    void Bind();
+    void UnBind();
+    void Set_Shader(Operator& op, Light_Src& light);
+    void Draw();
+    void Attach_Texture(Texture& tx);
+    void Attach_Texture(Texture3D& tx);
+    void Attach_Shadow_Map_Texture(const ShadowMap& sm);
 };
 
 

@@ -13,7 +13,15 @@
 #include <cmath>
 #include <iostream>
 
+
+#define twoPI 6.283185307
+#define PI 3.141592654
+#define halfPI 1.5707963
+
+
 namespace AMD {
+enum Projection_Type {Orthographic, Perspective};
+struct Quat;
 
 struct Vec2{
     float x,y;
@@ -48,6 +56,7 @@ struct Vec2{
 struct Vec3{
     float x,y,z;
     Vec3();
+    Vec3(float s);
     Vec3(float e_x, float e_y, float e_z);
     
     Vec3 add(const Vec3& other) const;
@@ -62,12 +71,16 @@ struct Vec3{
     Vec3 operator+(const Vec3& other) const;
     Vec3 operator-(const Vec3& other) const;
     Vec3& operator=(const Vec3& other);
-    Vec3 operator*(float scale);
-    Vec3 operator/(float div);
+    Vec3& operator=(const Quat& other);
+    Vec3 operator*(float scale) const;
+    Vec3 operator/(float div) const;
     Vec3 operator+=(const Vec3& other);
     Vec3 operator*=(float scale);
+    void Rotate_Quaternion(const Vec3& axis, float ang);
     void Reset();
     void print();
+    void Normalize();
+    void Vround(int decimals);
     
     
 };
@@ -76,6 +89,7 @@ struct Vec3{
 struct Vec4{
     float r,g,b,a;
     Vec4();
+    Vec4(float s);
     Vec4(float e_r, float e_g, float e_b, float e_a);
     Vec4(float* e_vec);
     Vec4(Vec3 vec);
@@ -89,6 +103,31 @@ struct Vec4{
     
 };
 
+
+struct Quat{
+    float w,x,y,z;
+    
+    Quat();
+    Quat(float ew, float ex, float ey, float ez);
+    Quat(Vec3 coords);
+    Quat(float ang, Vec3 coords);
+    ~Quat();
+    
+    
+    
+    Quat inverse();
+    
+    float* get();
+    float& operator[](const int& index);
+    Quat& operator=(const Quat& other);
+    
+    
+    
+    
+    
+};
+
+Quat operator*(const Quat& L,const Quat& R);
 
 
 struct Vertex{
@@ -127,6 +166,7 @@ struct Mat3{
     void Rotate(Vec3 ang);
     void Scale(float);
     void Scale(Vec3);
+    void Transpose();
     
     void print();
 };
@@ -155,13 +195,17 @@ struct Mat4{
     
     void assign_col(int col_idx, Vec4 col);
     void assign_row(int row_idx, Vec4 row);
+    void assign_col(int col_idx, Vec3 col);
+    void assign_row(int row_idx, Vec3 row);
+    
+    
     
     void Rotate(Vec3 ang);
     void Scale(float);
     void Scale(Vec3);
     void Translate(Vec3 vec);
     void Transpose();
-    
+    void Reset();
     void print();
 };
 
@@ -174,6 +218,14 @@ float Get_angle(const Vec3& A, const Vec3& B);
 void Compute_norms(Vertex* verts,unsigned int* ints, int num);
 
 void Map_Texture_Coords(Vertex* verts, int num_verts);
+
+float Round(float val, int num_decimal);
+
+Vec3 Round(const Vec3& vec, int decimals);
+
+Mat4 Projection(Projection_Type, Vec4);
+Mat4 Perspective_Matrix(Vec4);
+Mat4 Orthographic_Matrix(Vec4);
 
 }
 

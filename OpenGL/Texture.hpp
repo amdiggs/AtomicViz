@@ -15,41 +15,67 @@
 #include "Render.hpp"
 #include "My_Types.hpp"
 
+enum Texture_Type{Object_Color_Texture,Object_Normal_Map, Environment_Color, Shadow_Map_Texture, Render_Texture};
+
 class Atom;
 class Shader;
-const std::string SRCS =  "/Users/diggs/Desktop/OpenGL/OTHER/";
 class Texture{
 private:
-    enum Tex_Type{Noise = 1, Gaussian, Image};
-    unsigned int m_ID[10];
+    
     GLenum m_type = GL_TEXTURE_2D;
-    void Gen_Tex_2D(int layer, void* dat, int rows, int cols);
-    int m_count = 0;
+    void Gen_Tex_2D(void* dat);
+    int m_w, m_h, m_bpp;
+    unsigned int m_ID;
+    int m_layer;
     
     
 public:
-    Texture();
+    Texture(int layer);
     
     ~Texture();
     
-    void Bind(int layer);
-    void UnBind();
-    void Gen_Noise(int layer);
-    void Gen_Gauss(int layer);
-    void Image_Texture(int layer,std::string image);
-    void Image_Texture_RGB(int layer,std::string image);
+    void Bind() const;
+    void UnBind() const;
+    void Load(std::string image);
+    void Gen_Cube_Map(std::string image);
     
-    
-    int Get_ID(int layer);
-    
-    
-    
+    int Get_Layer() const;
+    int Get_ID() const;
     
 };
 
 
+class Texture3D{
+private:
+    
+    GLenum m_type = GL_TEXTURE_3D;
+    void Gen_Tex_3D(void* dat);
+    int m_w, m_h,m_z, m_bpp;
+    unsigned int m_ID;
+    int m_layer;
+    
+    
+public:
+    Texture3D(int layer);
+    
+    ~Texture3D();
+    
+    void Bind() const;
+    void UnBind() const;
+    void Load(std::string image);
+    
+    
+    void Simple_Test();
+    void Cavity();
+    void Cavity(AMD::Vec3* vecs, int num_vecs, AMD::Vec3 box_bounds);
+    int Get_Layer() const;
+    int Get_ID() const;
+    
+};
 
+#endif /* Texture_hpp */
 
+/*
 class Rand{
 public:
     Rand(const Rand&) = delete;
@@ -75,11 +101,9 @@ float Letter_Check(int i, int j, char let);
 void X_hat(GLubyte (*dat)[128][4]);
 void Y_hat(GLubyte (*dat)[128][4]);
 void Z_hat(GLubyte (*dat)[128][4]);
-#endif /* Texture_hpp */
-
-
-//void bind_multi(int layer);
-//void axis_texture(int layer,const Shader& sh);
-//void Off_set(Atom* ats,const Shader& sh);
-//void Gen_Gaussian(int layer,const Shader& sh);
+void bind_multi(int layer);
+void axis_texture(int layer,const Shader& sh);
+void Off_set(Atom* ats,const Shader& sh);
+void Gen_Gaussian(int layer,const Shader& sh);
+*/
 

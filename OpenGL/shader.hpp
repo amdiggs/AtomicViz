@@ -13,55 +13,55 @@
 #include <fstream>
 #include <string>
 #include <regex>
-#include "Render.hpp"
 #include "My_Types.hpp"
-#include "Shapes.hpp"
-#include "Operations.hpp"
 class Texture;
+class Texture3D;
+class Operator;
+class Light_Src;
+class ShadowMap;
+
+const int num_locs = 15;
+
 
 class Shader{
 private:
-    const std::string V_shader_file = "/Users/diggs/Desktop/OpenGL/OpenGL/Vertex.vs";
-    const std::string F_shader_file = "/Users/diggs/Desktop/OpenGL/OpenGL/Fragment.fs";
-    
-    unsigned int m_ID; unsigned int m_num_tex = 0;
+    unsigned int m_ID;
+    int m_locs[num_locs];
     unsigned int CompileShader(unsigned int type, const std::string& source);
     void CreateShader(const std::string& vertexShader,const std::string& geometryShader, const std::string& fragmentShader);
-    std::string get_sh_str(std::string sh_file);
+    void CreateShader(const std::string& vertexShader, const std::string& fragmentShader);
     std::string get_sh_str(std::string sh_type, std::string sh_file);
     
-    int displace_loc, MV_loc, MVP_loc, N_loc;
-    
-     int src_loc, light_clr_loc, sat_loc;
-    
-    int tex_locs[15]; int other_locs[15];
 
     
 public:
-    Shader(std::string v_type, std::string f_type);
     Shader(std::string file_name);
     ~Shader();
     
-    void bind();
-    void unbind();
+    void bind() const;
+    void unbind() const;
     int UniformLoc(const char* name) const;
-    void Get_Uniforms(int texc, const char* texv[]);
     
-    void Set_Uniforms(Operator& op, Light_Src src);
-    void Set_Value(char type, const float* mat_ptr) const;
-    void Set_Value(char type, const AMD::Vec3& vec) const;
-    void Set_Value(char type, const AMD::Vec4& vec) const;
-    void Set_Value(char type, const AMD::Vec2& vec) const;
-    void Set_Value(char type, const float& f) const;
-    void Set_Value(char type, const int& a) const;
+    void Set_Uniform_MVP(const Operator& op) const;
+    void Set_Uinform_LightSource(Light_Src& lsrc);
+    void Set_Uniform_Mat4(const char* name, const float* mptr) const;
+    void Set_Uniform_Mat3(const char* name, const float* mat_ptr) const;
+
+    void Set_Uniform_Vec4(const char* name, const AMD::Vec4& vec) const;
+    void Set_Uniform_Vec3(const char* name, const AMD::Vec3& vec) const;
+    void Set_Uniform_Vec2(const char* name, const AMD::Vec2& vec) const;
+    void Set_Uniform_Float(const char* name, const float& f) const;
     
     
-    
-    void set_texture(Texture& tx);
+    void Set_Texture(const char* name, const Texture& tex);
+    void Set_Texture(const char* name, const Texture3D& tex);
+    void Set_ShadowMap(const char* name, const ShadowMap& sm);
     
     
     
 };
 
+
+unsigned int Hash(const char* word);
 bool comment(std::string str, std::string reg_ex);
 #endif /* shader_hpp */

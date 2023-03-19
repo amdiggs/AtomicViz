@@ -6,22 +6,25 @@
 //
 
 #include "Simulation.hpp"
-
+#include "FrameBuffer.hpp"
 extern int num_atoms;
+extern AMD::Vec3 Sim_Box;
 
-Ensamble_Of_Atoms::Ensamble_Of_Atoms(std::string atomfile, Texture& tx)
+
+Ensamble_Of_Atoms::Ensamble_Of_Atoms(std::string atomfile)
 :m_ats(atoms(atomfile)), m_sh(shader_file), file_name(atomfile)
-{ 
+{
     Sphere sp(1.0);
     VertexBuffer vb(sp.verts, sp.num_verts()*sizeof(AMD::Vertex));
     m_VAO.Add_Vertex_Buffer(vb);
     m_IBO.Gen_Buffer(sp.indices,sp.num_idx());
     Add_Instance_Layout();
-    m_sh.Get_Uniforms(m_num_tex, uniform_text_names);
-    Bind();
-    m_sh.set_texture(tx);
-    UnBind();
+    //Bind();
+    
+    
 }
+
+
 
 Ensamble_Of_Atoms::~Ensamble_Of_Atoms() {
     free(m_ats);
@@ -43,18 +46,27 @@ void Ensamble_Of_Atoms::Add_Instance_Layout(){
 
 void Ensamble_Of_Atoms::Bind(){
     this->m_sh.bind();
+    this->m_VAO.bind();
+    this->m_IBO.bind();
     
     
 }
 
 void Ensamble_Of_Atoms::UnBind(){
     this->m_sh.unbind();
+    this->m_VAO.unbind();
+    this->m_IBO.unbind();
 }
 
-void Ensamble_Of_Atoms::DrawBind(){
-    this->m_sh.bind();
+void Ensamble_Of_Atoms::Draw(int num_draws){
     this->m_VAO.bind();
     this->m_IBO.bind();
+    if (num_draws == 1){
+        glDrawElements(GL_TRIANGLES,m_IBO.get_num(), GL_UNSIGNED_INT,0);
+    }
+    else{
+        glDrawElementsInstanced(GL_TRIANGLES,m_IBO.get_num(), GL_UNSIGNED_INT,0, num_atoms);
+    }
     
 }
 
@@ -64,14 +76,13 @@ unsigned int Ensamble_Of_Atoms::num_idx(){
 }
 
 
-void Ensamble_Of_Atoms::Set_Op(Operator& op, Light_Src& l){
-    this->m_sh.Set_Uniforms(op, l);
+void Ensamble_Of_Atoms::Set_Op(Operator& op, Light_Src& light){
+    this->m_sh.bind();
+    this->m_sh.Set_Uniform_MVP(op);
+    this->m_sh.Set_Uinform_LightSource(light);
     
 }
 
-void Ensamble_Of_Atoms::Bind_Texture(Texture& tx,int layer){
-    this->m_sh.set_texture(tx);
-}
 
 
 
@@ -103,7 +114,6 @@ AMD::Vec3 Ensamble_Of_Atoms::Get_Box(){
 }
 
 
-
 //============================================================================================
 Bonds::Bonds(Ensamble_Of_Atoms &ats, Texture& tx)
 :m_sh(shader_file)
@@ -113,10 +123,6 @@ Bonds::Bonds(Ensamble_Of_Atoms &ats, Texture& tx)
     m_VAO.Add_Vertex_Buffer(vb);
     m_IBO.Gen_Buffer(cy.indices,cy.num_idx());
     Add_Instance_Layout(ats);
-    m_sh.Get_Uniforms(m_num_tex, uniform_text_names);
-    Bind();
-    m_sh.set_texture(tx);
-    UnBind();
     
 }
 
@@ -142,6 +148,7 @@ void Bonds::Add_Instance_Layout(std::string atom_file) {
 }
 
 
+
 void Bonds::Add_Instance_Layout(Ensamble_Of_Atoms& ats) {
     int nb = ats.num_bonds;
     Bond bd[nb];  //= (Bond*)malloc(4*sizeof(Bond));
@@ -160,7 +167,6 @@ void Bonds::Add_Instance_Layout(Ensamble_Of_Atoms& ats) {
         
         
     }
-    
     m_VAO.AddBuffer(bond_os,sizeof(AMD::Vec3), num_bonds);
     m_VAO.AddBuffer(bond_ang,sizeof(AMD::Vec3), num_bonds);
     m_VAO.AddBuffer(type_vec,sizeof(AMD::Vec2), num_bonds);
@@ -181,16 +187,14 @@ void Bonds::DrawBind() {
     this->m_IBO.bind();
 }
 
-void Bonds::Bind_Texture(Texture& tx, int layer) {
-    m_sh.set_texture(tx);
-}
-
 unsigned int Bonds::num_idx() { 
     return this->m_IBO.get_num();
 }
 
-void Bonds::Set_Op(Operator &op, Light_Src &l) { 
-    this->m_sh.Set_Uniforms(op, l);
+void Bonds::Set_Op(Operator &op, Light_Src &light) {
+    this->m_sh.bind();
+    this->m_sh.Set_Uniform_MVP(op);
+    this->m_sh.Set_Uinform_LightSource(light);
 }
     
 
@@ -199,241 +203,189 @@ void Bonds::Set_Op(Operator &op, Light_Src &l) {
 // ####################################################3
 
 
-
-
-
-
-Grid_Mesh::Grid_Mesh(Texture& tx)
-    :m_sh("GRID", "GRID"){
-        Grid gr(0.5);
-        VertexBuffer vb(gr.verts, gr.num_verts()*sizeof(AMD::Vertex));
-        m_VAO.Add_Vertex_Buffer(vb);
-        m_IBO.Gen_Buffer(gr.L_indices,gr.num_idx('L'));
-        m_sh.bind();
-        m_sh.set_texture(tx);
-        m_sh.unbind();
-    }
-
-Grid_Mesh::~Grid_Mesh() {}
-
-void Grid_Mesh::Bind(){
-    m_sh.bind();
-}
-
-void Grid_Mesh::UnBind(){
-        m_sh.unbind();
-    }
-
-void Grid_Mesh::DrawBind() {
-        this->m_sh.bind();
-        this->m_VAO.bind();
-        this->m_IBO.bind();
-    }
-
-
-unsigned int Grid_Mesh::num_idx() {
-        return this->m_IBO.get_num();
-    }
-
-void Grid_Mesh::Set_Op(Operator &op, Light_Src &l) {
-        this->m_sh.Set_Uniforms(op, l);
-    }
-
-
-Quad_Mesh::Quad_Mesh(Texture &tx, AMD::Vec3 vec, const char face)
-:m_sh("QUAD", "QUAD")
+Floor::Floor(float y)
+:m_sh(shader_file)
 {
-    Get_Face(vec, face);
-    Quad qd(points[0],points[1],points[2],points[3], m_cw.c_str());
+    AMD::Vec3 LL(-10.5,y, -5.5);
+    AMD::Vec3 LR(10.5,y, -5.5);
+    AMD::Vec3 UR(10.5,y, 10.5);
+    AMD::Vec3 UL(-10.5,y, 10.5);
+    Quad qd(LL,LR,UR,UL, "cw");
     VertexBuffer vb(qd.verts, qd.num_verts()*sizeof(AMD::Vertex));
     m_VAO.Add_Vertex_Buffer(vb);
     m_IBO.Gen_Buffer(qd.indices,qd.num_idx());
-    Bind();
-    m_sh.set_texture(tx);
-    UnBind();
+    
 }
 
-Quad_Mesh::~Quad_Mesh() {}
+Floor::~Floor(){}
 
-void Quad_Mesh::DrawBind() { 
+void Floor::Bind(){
     this->m_sh.bind();
     this->m_VAO.bind();
     this->m_IBO.bind();
 }
+
+
+void Floor::UnBind(){
+    this->m_sh.unbind();
+    this->m_VAO.unbind();
+    this->m_IBO.unbind();
+}
+
+
+void Floor::Draw(Operator& op){
+    this->m_VAO.bind();
+    this->m_IBO.bind();
+    //m_VP = op.Get_VP();
+    //m_sh.Set_U_Mat4(Uniform_names, op.MVP_ptr);
+    glDrawElements(GL_TRIANGLES,m_IBO.get_num(), GL_UNSIGNED_INT,0);
+    this->m_VAO.unbind();
+    this->m_IBO.unbind();
+    //UnBind();
+}
+
+
+
+
+
+//##############################################################3
+Quad_Mesh::Quad_Mesh()
+{
+    Quad qd(2.0);
+    VertexBuffer vb(qd.verts, qd.num_verts()*sizeof(AMD::Vertex));
+    m_VAO.Add_Vertex_Buffer(vb);
+    m_IBO.Gen_Buffer(qd.indices,qd.num_idx());
+}
+
+Quad_Mesh::Quad_Mesh(AMD::Vec3 LL, AMD::Vec3 LR, AMD::Vec3 UR, AMD::Vec3 UL)
+{
+    Quad qd(LL,LR,UR,UL, "cw");
+    VertexBuffer vb(qd.verts, qd.num_verts()*sizeof(AMD::Vertex));
+    m_VAO.Add_Vertex_Buffer(vb);
+    m_IBO.Gen_Buffer(qd.indices,qd.num_idx());
+}
+
+Quad_Mesh::~Quad_Mesh() {}
+
 
 unsigned int Quad_Mesh::num_idx() { 
     return this->m_IBO.get_num();
 }
 
-void Quad_Mesh::Set_Op(Operator &op, Light_Src &l) { 
-    this->m_sh.Set_Uniforms(op, l);
-}
 
 void Quad_Mesh::Bind() { 
-    m_sh.bind();
+    this->m_VAO.bind();
+    this->m_IBO.bind();
 }
 
 void Quad_Mesh::UnBind() { 
-    m_sh.unbind();
-}
-
-void Quad_Mesh::Bind_Texture(Texture &tx) { 
-    m_sh.set_texture(tx);
+    this->m_VAO.unbind();
+    this->m_IBO.unbind();
 }
 
 
 
-void Quad_Mesh::Get_Face(AMD::Vec3 BB, const char choice){
-    //float x = BB.x*0.33; float y = BB.y*0.29; float z = BB.z*0.25;
-    float x = 1.0; float y = 0.0; float z = 0.25;
-    switch (choice) {
-        case 'F':
-            points[0] = AMD::Vec3(-2.2,y, -z);
-            points[1] = AMD::Vec3(-2.2,y, z);
-            points[2] = AMD::Vec3(-0.25, y, z);
-            points[3] = AMD::Vec3(-0.25, y, -z);
-            m_cw = "cw";
-            break;
-            
-        case 'B':
-            points[0] = AMD::Vec3(-x,-y, -z);
-            points[1] = AMD::Vec3(-x,-y, z);
-            points[2] = AMD::Vec3(x, -y, z);
-            points[3] = AMD::Vec3(x, -y, -z);
-            m_cw = "ccw";
-            break;
-            
-        case 'L':
-            points[0] = AMD::Vec3(-x,-y, -z);
-            points[1] = AMD::Vec3(-x,-y, z);
-            points[2] = AMD::Vec3(-x, y, z);
-            points[3] = AMD::Vec3(-x, y, -z);
-            m_cw = "ccw";
-            break;
-        case 'R':
-            points[0] = AMD::Vec3(x,-y, -z);
-            points[1] = AMD::Vec3(x,-y, z);
-            points[2] = AMD::Vec3(x, y, z);
-            points[3] = AMD::Vec3(x, y, -z);
-            m_cw = "cw";
-            break;
-            
-        default:
-            break;
-    }
-}
 
 
-Box_Bounds::Box_Bounds(Texture &tx, AMD::Vec3 BB)
-:m_sh("BOX", "BOX"){ 
-    Cube cb(BB);
-    VertexBuffer vb(cb.verts, cb.num_verts()*sizeof(AMD::Vertex));
+Test_Object::Test_Object()
+:m_sh(shader_file)
+{
+    Axis ax;
+    VertexBuffer vb(ax.verts, ax.num_verts()*sizeof(AMD::Vertex));
     m_VAO.Add_Vertex_Buffer(vb);
-    m_IBO.Gen_Buffer(cb.indices,cb.num_idx());
-    Bind();
-    m_sh.set_texture(tx);
-    UnBind();
+    m_IBO.Gen_Buffer(ax.indices,ax.num_idx());
 }
 
-Box_Bounds::~Box_Bounds() {}
-
-
-
-
-void Box_Bounds::DrawBind() { 
-    this->m_sh.bind();
-    this->m_VAO.bind();
-    this->m_IBO.bind();
-}
-
-unsigned int Box_Bounds::num_idx() { 
-    return this->m_IBO.get_num();
-}
-
-void Box_Bounds::Set_Op(Operator &op, Light_Src &l) { 
-    this->m_sh.Set_Uniforms(op, l);
-}
-
-void Box_Bounds::Bind() { 
-    this->m_sh.bind();
-}
-
-void Box_Bounds::UnBind() { 
-    this->m_sh.unbind();
-}
-
-void Box_Bounds::Bind_Texture(Texture &tx) { 
-    m_sh.set_texture(tx);
-}
-
-
-
-
-
-
-
-
-
-
-Test_Object::Test_Object(Texture& tx)
-:m_sh(shader_file), m_num_obj(2){
-
-    Sphere sp(1.0);
-    VertexBuffer vb(sp.verts, sp.num_verts()*sizeof(AMD::Vertex));
-    m_VAO.Add_Vertex_Buffer(vb);
-    Add_Instance_Layout();
-    m_IBO.Gen_Buffer(sp.indices,sp.num_idx());
-    m_sh.Get_Uniforms(m_num_tex, uniform_text_names);
-    Bind();
-    m_sh.set_texture(tx);
-    UnBind();
-}
 
 Test_Object::~Test_Object() {}
 
-void Test_Object::DrawBind() { 
+void Test_Object::Draw(){
+    Bind();
+    glDrawElements(GL_TRIANGLES,m_IBO.get_num(), GL_UNSIGNED_INT,0);
+    UnBind();
+}
+
+void Test_Object::Set_Shader(Operator& op, Light_Src& light){
+    this->m_sh.bind();
+    this->m_sh.Set_Uniform_MVP(op);
+    this->m_sh.Set_Uinform_LightSource(light);
+}
+
+void Test_Object::Bind() {
+    this->m_VAO.bind();
+    this->m_IBO.bind();
+}
+
+void Test_Object::UnBind() {
+    this->m_VAO.unbind();
+    this->m_IBO.unbind();
+}
+
+void Test_Object::Bind_Texture(Texture& tx){
+    m_sh.Set_Texture(m_sampler, tx);
+}
+
+
+Environment::Environment()
+:m_sh(shader_file)
+{
+    Cube cb(1.0);
+    VertexBuffer vb(cb.verts, cb.num_verts()*sizeof(AMD::Vertex));
+    m_VAO.Add_Vertex_Buffer(vb);
+    m_IBO.Gen_Buffer(cb.indices,cb.num_idx());
+    
+}
+
+Environment::~Environment(){}
+
+void Environment::Bind(){
     this->m_sh.bind();
     this->m_VAO.bind();
     this->m_IBO.bind();
 }
 
-unsigned int Test_Object::num_idx() { 
-    return this->m_IBO.get_num();
-}
 
-void Test_Object::Set_Op(Operator &op, Light_Src &l) { 
-    this->m_sh.Set_Uniforms(op, l);
-}
-
-void Test_Object::Bind() { 
-    this->m_sh.bind();
-}
-
-void Test_Object::UnBind() { 
+void Environment::UnBind(){
     this->m_sh.unbind();
+    this->m_VAO.unbind();
+    this->m_IBO.unbind();
 }
 
-void Test_Object::Bind_Texture(Texture &tx) { 
-    this->m_sh.set_texture(tx);
+void Environment::Set_Shader(Operator& op, Light_Src& light){
+    this->m_sh.bind();
+    this->m_sh.Set_Uniform_MVP(op);
+    this->m_sh.Set_Uinform_LightSource(light);
 }
 
+void Environment::Draw(){
+    this->m_VAO.bind();
+    this->m_IBO.bind();
+    glDrawElements(GL_TRIANGLES,m_IBO.get_num(), GL_UNSIGNED_INT,0);
+    UnBind();
+}
 
+void Environment::Attach_Texture(Texture& tx){
+    m_sh.Set_Texture(m_sampler, tx);
+}
 
-void Test_Object::Add_Instance_Layout(){
+void Environment::Attach_Texture(Texture3D& tx){
+    m_sh.Set_Texture(m_sampler, tx);
+}
 
-    float dx = -2.0;
-    AMD::Vec3 off_set[m_num_obj];
-    float types[m_num_obj];
-    for (int i = 0; i<m_num_obj; i++){
-        off_set[i] = AMD::Vec3(dx, 0.0, 0.0);
-        types[i] = 1.0;
-        dx*= -1.0;
-    }
+void Environment::Attach_Shadow_Map_Texture(const ShadowMap& sm){
+    int loc = m_sh.UniformLoc("ShadowMap");
+    m_sh.bind();
+    sm.ReadBind();
+    glUniform1i(loc, sm.Get_Layer());
     
-    m_VAO.AddBuffer(off_set,sizeof(AMD::Vec3), m_num_obj);
-    m_VAO.AddBuffer(types,sizeof(float), m_num_obj);
 }
 
-unsigned int Test_Object::num_obj() {
-    return this->m_num_obj;
-}
+
+
+
+
+
+
+
+
+

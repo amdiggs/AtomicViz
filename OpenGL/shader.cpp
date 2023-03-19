@@ -7,53 +7,22 @@
 
 #include "shader.hpp"
 #include "Texture.hpp"
+#include "Shapes.hpp"
+#include "Operations.hpp"
+#include "FrameBuffer.hpp"
 
-
-
-Shader::Shader(std::string v_type, std::string f_type){
-    std::string vertexShader = get_sh_str(v_type, V_shader_file);
-    std::string fragmentShader = get_sh_str(f_type, F_shader_file);
-    //CreateShader(vertexShader, fragmentShader);
-    
-    
-    MV_loc = UniformLoc("u_MV");
-    MVP_loc = UniformLoc("u_MVP");
-    N_loc = UniformLoc("u_Normal");
-    
-    src_loc = UniformLoc("l_src");
-    light_clr_loc = UniformLoc("l_color");
-    
-    tex_locs[0] = UniformLoc("u_Texture");
-    tex_locs[1] = UniformLoc("u_Texture2");
-    tex_locs[2] = UniformLoc("u_map");
-    m_num_tex = 3;
-    
-    
-    
-    
-    
-}
 
 
 Shader::Shader(std::string file_name){
     std::string vertexShader = get_sh_str("VERTEX", file_name);
     std::string geometryShader = get_sh_str("GEOMETRY",file_name);
     std::string fragmentShader = get_sh_str("FRAGMENT", file_name);
-    CreateShader(vertexShader, geometryShader, fragmentShader);
     
+    if(!geometryShader.empty()){
+        CreateShader(vertexShader, geometryShader, fragmentShader);
+    }
+    else{CreateShader(vertexShader, fragmentShader);}
 
-    MV_loc = UniformLoc("u_MV");
-    MVP_loc = UniformLoc("u_MVP");
-    N_loc = UniformLoc("u_Normal");
-    
-    
-    src_loc = UniformLoc("l_src");
-    light_clr_loc = UniformLoc("l_color");
-    
-    
-    
-    
-    
 }
 
 
@@ -63,14 +32,38 @@ Shader::~Shader(){
 
 
 
-void Shader::bind(){
+void Shader::bind() const{
     glUseProgram(m_ID);
 }
 
-void Shader::unbind(){
+void Shader::unbind() const{
     glUseProgram(0);
 }
 
+
+
+std::string Shader::get_sh_str(std::string sh_type, std::string sh_file){
+    std::ifstream in_file;
+    std::string shader_string;
+    in_file.open(sh_file);
+    if (!in_file.is_open()){
+        std::cout << "ERROR!!" << std::endl;
+    }
+    std::string line;
+    while (getline(in_file, line)) {
+        if (comment(line, "#SHADER " + sh_type)){
+            while (getline(in_file, line)){
+                if (!line.empty()){
+                    if (comment(line, "#END")) {
+                        break;
+                    }
+                    else{shader_string.append(line + "\n");}
+                }
+            }
+        }
+    }
+    return shader_string;
+}
 
 
 
@@ -106,6 +99,17 @@ void Shader::CreateShader(const std::string& vertexShader,const std::string& geo
     glAttachShader(m_ID, gs);
     glAttachShader(m_ID, fs);
     glLinkProgram(m_ID);
+    int link_result;
+    glGetShaderiv(m_ID, GL_LINK_STATUS, &link_result);
+    if (link_result == GL_FALSE)
+    {
+        int length;
+        glGetShaderiv(m_ID, GL_INFO_LOG_LENGTH, &length);
+        char* message = (char*)alloca(length * sizeof(char));
+        glGetShaderInfoLog(m_ID, length, &length, message);
+        std::cout << message << std::endl;
+    }
+    
     glValidateProgram(m_ID);
     
     glDeleteShader(vs);
@@ -117,12 +121,22 @@ void Shader::CreateShader(const std::string& vertexShader,const std::string& geo
     
 }
 
-
-void Shader::Get_Uniforms(int texc, const char* texv[]){
-    for (int i = 0; i< texc; i++){
-        tex_locs[i] = UniformLoc(texv[i]);
-        m_num_tex++;
-    }
+void Shader::CreateShader(const std::string& vertexShader, const std::string& fragmentShader){
+    m_ID = glCreateProgram();
+    unsigned int vs = CompileShader(GL_VERTEX_SHADER, vertexShader);
+    unsigned int fs = CompileShader(GL_FRAGMENT_SHADER, fragmentShader);
+    
+    glAttachShader(m_ID, vs);
+    glAttachShader(m_ID, fs);
+    glLinkProgram(m_ID);
+    glValidateProgram(m_ID);
+    
+    glDeleteShader(vs);
+    glDeleteShader(fs);
+    
+    return;
+    
+    
 }
 
 int Shader::UniformLoc(const char* name) const{
@@ -136,6 +150,84 @@ int Shader::UniformLoc(const char* name) const{
 
 
 
+void Shader::Set_Uniform_MVP(const Operator& op) const{
+    bind();
+    
+    Set_Uniform_Mat3("u_Normal", op.Norm_ptr);
+    Set_Uniform_Mat4("u_MVP", op.MVP_ptr);
+    
+    
+}
+
+void Shader::Set_Uinform_LightSource(Light_Src& lsrc){
+    Set_Uniform_Vec3("l_src.dir", lsrc.Get_Direction_vec());
+    Set_Uniform_Vec4("l_src.clr", lsrc.Get_Color_vec());
+    Set_Uniform_Float("l_src.sat", lsrc.Get_Saturation());
+}
+
+
+void Shader::Set_Uniform_Mat4(const char* name, const float* mptr) const{
+    int loc = UniformLoc(name);
+    glUniformMatrix4fv(loc,1,GL_FALSE, mptr);
+}
+
+void Shader::Set_Uniform_Mat3(const char* name, const float* mat_ptr) const {
+    int loc = UniformLoc(name);
+    glUniformMatrix3fv(loc,1,GL_FALSE, mat_ptr);
+}
+
+
+void Shader::Set_Uniform_Vec2(const char* name, const AMD::Vec2& vec) const {
+    int loc = UniformLoc(name);
+    glUniform2fv(loc, 1,(float*) &vec);
+}
+
+
+void Shader::Set_Uniform_Vec3(const char* name, const AMD::Vec3& vec) const {
+    int loc = UniformLoc(name);
+    glUniform3fv(loc, 1,(float*) &vec);
+}
+
+
+void Shader::Set_Uniform_Vec4(const char* name, const AMD::Vec4& vec) const {
+    int loc = UniformLoc(name);
+    glUniform4fv(loc,1,(float*) &vec);
+}
+
+
+void Shader::Set_Uniform_Float(const char* name, const float& f) const {
+    int loc = UniformLoc(name);
+    glUniform1f(loc,f);
+}
+
+
+
+void Shader::Set_Texture(const char* name, const Texture& text){
+    int loc = UniformLoc(name);
+    bind();
+    text.Bind();
+    glUniform1i(loc, text.Get_Layer());
+    
+}
+
+
+void Shader::Set_Texture(const char* name, const Texture3D& text){
+    int loc = UniformLoc(name);
+    bind();
+    text.Bind();
+    glUniform1i(loc, text.Get_Layer());
+    
+}
+
+
+void Shader::Set_ShadowMap(const char* name, const ShadowMap& sm){
+    int loc = UniformLoc(name);
+    bind();
+    sm.ReadBind();
+    glUniform1i(loc, sm.Get_Layer());
+}
+
+
 bool comment(std::string str, std::string reg_ex){
     std::regex reg(reg_ex);
     std::smatch m;
@@ -143,142 +235,17 @@ bool comment(std::string str, std::string reg_ex){
     return !m.empty();
 };
 
-
-std::string Shader::get_sh_str(std::string sh_type){
-    std::ifstream in_file;
-    std::string shader_string;
-    in_file.open(V_shader_file);
-    if (!in_file.is_open()){
-        std::cout << "ERROR!!" << std::endl;
+unsigned int Hash(const char* word){
+    unsigned int hash_int = 0;
+    for (int i = 0; i<std::strlen(word); i++){
+        hash_int+=word[i];
     }
-    std::string line;
-    while (getline(in_file, line)) {
-        if (comment(line, "#SHADER " + sh_type)){
-            while (getline(in_file, line)){
-                if (!line.empty()){
-                    if (comment(line, "#END")) {
-                        break;
-                    }
-                    else{shader_string.append(line + "\n");}
-                }
-            }
-        }
-    }
-    return shader_string;
-}
-
-
-std::string Shader::get_sh_str(std::string sh_type, std::string sh_file){
-    std::ifstream in_file;
-    std::string shader_string;
-    in_file.open(sh_file);
-    if (!in_file.is_open()){
-        std::cout << "ERROR!!" << std::endl;
-    }
-    std::string line;
-    while (getline(in_file, line)) {
-        if (comment(line, "#SHADER " + sh_type)){
-            while (getline(in_file, line)){
-                if (!line.empty()){
-                    if (comment(line, "#END")) {
-                        break;
-                    }
-                    else{shader_string.append(line + "\n");}
-                }
-            }
-        }
-    }
-    return shader_string;
+    return hash_int % num_locs;
 }
 
 
 
 
 
-void Shader::Set_Uniforms(Operator& op, Light_Src src){
-    bind();
-    op.set_Model();
-    op.set_View();
-    op.set_projection();
-    op.set_MV();
-    op.set_MVP();
-    
-    
-    Set_Value('M', op.MV_ptr);
-    Set_Value('N', op.rot_ptr);
-    Set_Value('P', op.MVP_ptr);
-    
-    
-    Set_Value('s', src.get_light_src());
-    Set_Value('z', src.get_light_clr());
-    Set_Value('x', src.get_light_sat());
-    
-}
-
-void Shader::Set_Value(char type, const float* mat_ptr) const {
-    switch (type) {
-            
-        case 'M':
-            glUniformMatrix4fv(MV_loc,1,GL_FALSE, mat_ptr);
-            break;
-            
-        case 'N':
-            glUniformMatrix4fv(N_loc,1,GL_FALSE, mat_ptr);
-            break;
-            
-        case 'P':
-            glUniformMatrix4fv(MVP_loc,1,GL_FALSE, mat_ptr);
-            break;
-            
-        default:
-            break;
-    }
-}
-
-void Shader::Set_Value(char type, const AMD::Vec2& vec) const {
-    glUniform2f(src_loc, vec.x, vec.y);
-}
 
 
-void Shader::Set_Value(char type, const AMD::Vec3& vec) const {
-    switch (type) {
-        case 's':
-            glUniform3f(src_loc, vec.x, vec.y, vec.z);
-            break;
-        case 'c':
-            glUniform3f( light_clr_loc, vec.x, vec.y, vec.z);
-            break;
-            
-        case 'd':
-            
-            break;
-            
-            
-            
-            
-        default:
-            break;
-    }
-}
-
-
-void Shader::Set_Value(char type, const AMD::Vec4& vec) const {
-    glUniform4fv(light_clr_loc,1,(float*) &vec);
-}
-
-
-void Shader::Set_Value(char type, const float& f) const {
-    glUniform1f(sat_loc,f);
-}
-
-
-
-
-
-void Shader::set_texture(Texture& tx){
-    bind();
-    for (int i = 0; i< m_num_tex; i++){
-        tx.Bind(i);
-        glUniform1i(tex_locs[i], i);
-    }
-}

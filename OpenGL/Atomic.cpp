@@ -8,7 +8,10 @@
 #include "Atomic.hpp"
 #include "FileIO.hpp"
 #include "Shapes.hpp"
+
 int num_atoms;
+AMD::Vec3 SIm_Box;
+
 Atom::Atom()
 : m_coords(AMD::Vec3()), m_type(0), m_rad(0.0), m_num_neighbors(0)
 {}
@@ -34,8 +37,10 @@ Atom::Atom(std::string line, AMD::Vec3 BB)
     float x, y, z;
     ss << line;
     ss >> m_num >> m_type >> x >> y >> z;
-    float testx = x*dx - 0.5*dx; float testy = y*dy -0.5*dy; float testz = z*dz - 0.5*dz;
-    m_coords = AMD::Vec3(x*dx - 0.5*dx,y*dy -0.5*dy ,z*dz - 0.5*dz);
+    
+    m_coords = AMD::Vec3((x - 0.5)*SIm_Box.x,(y - 0.5)*SIm_Box.y,(z - 0.5)*SIm_Box.z);
+    
+    //m_coords = AMD::Vec3(x*SIm_Box.x,y*SIm_Box.y,z*SIm_Box.z);
     
 }
 
@@ -156,7 +161,7 @@ Atom* atoms(std::string file){
                         getline(infile, line);
                         bbss << line;
                         bbss >> low >> high;
-                        BB[i] = high;
+                        SIm_Box[i]= high;
                         bbss.str(std::string());
                         bbss.clear();
                         

@@ -17,123 +17,195 @@
 #include "Atomic.hpp"
 #include "Texture.hpp"
 #include "Simulation.hpp"
-
+#include "FrameBuffer.hpp"
 extern int num_atoms;
-extern const std::string SRCS;
+
 
 AMD::Mat4 CT = ROTATION_MATRIX(AMD::Vec3(0.0, 0.0, 0.78539));
 
-void TEST(){
-    std::string Basic_shader_file = "/Users/diggs/Desktop/OpenGL/OpenGL/Shaders/Sphere.vs";
-    Sphere sp(1.0);
-    VertexArray VAO;
-    VertexBuffer vb(sp.verts, sp.num_verts()*sizeof(AMD::Vertex));
-    VAO.Add_Vertex_Buffer(vb);
-    IndexBuffer IBO;
-    IBO.Gen_Buffer(sp.indices,sp.num_idx());
-    Shader sh(Basic_shader_file);
-    
 
+class Voxelize{
+private:
+    const std::string shader_file = "/Users/diggs/Desktop/OpenGL/OpenGL/Shaders/voxel.fs";
+    const char* m_sampler = "Vol_Tex";
+    VertexArray m_VAO;
+    IndexBuffer m_IBO;
     
-    Texture tx;
-    tx.Image_Texture_RGB(0, "spring2.jpg");
-    tx.Image_Texture(1, "moon.png");
-    tx.Image_Texture_RGB(2, "MoonNormal.jpg");
-    sh.bind();
-    sh.unbind();
     
+public:
+    Shader m_sh;
+    
+    Voxelize()
+    :m_sh(shader_file)
+    {
+        Volume_XY vox(4.0, 4.0, 4.0, 100);
+        //Voxel_Grid vox(2.0, 2.0, 2.0, 20, 20);
+        VertexBuffer vb(vox.verts, vox.num_verts()*sizeof(AMD::Vertex));
+        m_VAO.Add_Vertex_Buffer(vb);
+        m_IBO.Gen_Buffer(vox.indices,vox.num_idx());
+        
+    }
+    
+    ~Voxelize(){}
+    
+    void Bind(){
+        this->m_sh.bind();
+        this->m_VAO.bind();
+        this->m_IBO.bind();
+    }
+    
+    
+    void UnBind(){
+        this->m_sh.unbind();
+        this->m_VAO.unbind();
+        this->m_IBO.unbind();
+    }
+    
+    void Set_Shader(Operator& op, Light_Src& light){
+        this->m_sh.bind();
+        this->m_sh.Set_Uniform_MVP(op);
+        this->m_sh.Set_Uinform_LightSource(light);
+    }
+    
+    void Draw(){
+        this->m_VAO.bind();
+        this->m_IBO.bind();
+        glDrawElements(GL_TRIANGLES,m_IBO.get_num(), GL_UNSIGNED_INT,0);
+        this->m_VAO.unbind();
+        this->m_IBO.unbind();
+    }
+    
+    void Attach_Texture(Texture3D& tx){
+        m_sh.Set_Texture(m_sampler, tx);
+    }
+    
+};
+
+/*
+void Run_Shadow(){
+    
+    std::string atom_file = "/Users/diggs/Desktop/OpenGL/OTHER/ring.atom";
+    
+    Renderer my_rend(1000, 900, "Hello World", NULL, NULL, false);
+    UI_Window ui(0.0,0.0,my_rend.Get_Window());
+    
+    //Init Darwable stuff
+    Environment env;
+    Floor floor(-2.01);
+    Quad_Mesh qd;
+    
+    //init Operator and Light Source
+    Operator op;
+    Light_Src l_src;
+    
+    //#Init and Load Textures
+    Texture tx(0);
+    tx.Load("dicetext.png");
+    env.Attach_Texture(tx);
+    AMD::Mat4 test;
+    //init FBO
+    ShadowMap sm(6000, 6000);
+    
+    int loc;
+    while (!my_rend.is_open())
+    {
+        //General stuff
+        op.Set();
+        
+        //UI Sstuff
+        ui.NewFrame();
+        ui.Simple_window(op, l_src, my_rend.m_w, my_rend.m_h);
+        ui.log_window(op.Get_Model(), false);
+        ui.log_window(test, true);
+        
+        //Framebuffer/Shadowmap pass
+        sm.Set_MLP(op, l_src);
+        sm.Pass();
+        env.Draw();
+        
+        //Draw Pass
+        my_rend.Draw_Pass();
+        
+        // I need to bind the shadow map texture
+        //env.Attach_Shadow_Map_Texture(sm);
+        // and other textures
+        
+        //Get the MLP matrix
+        test = op.Get_MLP(l_src);
+        env.m_sh.Set_Uniform_Mat4("u_LightMVP", &test[0][0]);
+        
+        // then set the uniform sampler in the object shader.
+        
+        env.Set_Shader(op, l_src);
+        //env.m_sh.Set_U_Mat4("u_MVP", &test[0][0]);
+        env.Draw();
+        
+        
+        loc = floor.m_sh.UniformLoc("ShadowMap");
+        floor.m_sh.bind();
+        //sm.ReadBind(0);
+        glUniform1i(loc,sm.Get_Layer());
+        floor.m_sh.Set_Uniform_Mat4("u_LightMVP", &test[0][0]);
+        floor.m_sh.Set_Uniform_Mat4("u_VP", op.MVP_ptr);
+        //floor.m_sh.Set_U_Mat4("u_VP", &test[0][0]);
+        floor.Draw(op);
 }
 
-
+}
+*/
 
 int main(void)
 {
     
-    std::string fname = SRCS+"PEsurface_norm.xyz";
-    std::string atom_file = "/Users/diggs/Desktop/OpenGL/OTHER/atom_test.atom";
-    std::string Basic_shader_file = "/Users/diggs/Desktop/OpenGL/OpenGL/Shaders/Basic.vs";
-        
-
-
+    Renderer my_rend(1000, 900, "Hello World", NULL, NULL, false);
+    UI_Window ui(0.0,0.0,my_rend.Get_Window());
     
-
+    //Init Darwable stuff
+    Voxelize vox;
+    //Floor floor(-2.01);
+    Quad_Mesh qd;
     
-    
-    
-    
-    Renderer my_rend(100, 900, "Hello World", NULL, NULL, false);
-    UI_Window ui(0.0,0.0,my_rend.draw_window());
-    
-
-    
-    
-    Texture tx;
-    //tx.Gen_Noise(0);
-    tx.Image_Texture_RGB(0, "MoonNormal.jpg");
-    tx.Image_Texture(2, "water.png");
-    tx.Image_Texture(1, "moon.png");
-    
-    
-
-    Test_Object tst(tx);
-    
-    //Ensamble_Of_Atoms ats(atom_file, tx);
-    //ats.Compute_Neighbors();
-    
-   //Bonds bds(ats,tx);
-   //Grid_Mesh gr(tx);
-   //Quad_Mesh qd(tx,AMD::Vec3(3.0,1.0,1.0),'F');
-   //Box_Bounds BB(tx, ats.Get_Box());
-    
-    
+    //init Operator and Light Source
     Operator op;
     Light_Src l_src;
     
-
+    Texture3D tx(0);
+    AMD::Vec3 vecs[5] = {AMD::Vec3(-1.5,-1.5,-1.5), AMD::Vec3(0.0,0.0,0.0),AMD::Vec3(1.5,1.5,1.5),AMD::Vec3(-1.5,1.5,1.5), AMD::Vec3(-1.5,-1.5,1.5)};
+    AMD::Vec3 bb(4.0,4.0,4.0);
+    tx.Cavity(vecs,5,bb);
+    vox.Attach_Texture(tx);
     
-    float dx = 0.0;
-    AMD::Vec3 m_vec(0.0, 0.0, 0.0);
-    int counter = 0;
     
     while (!my_rend.is_open())
     {
-        /* Render here */
-        my_rend.clear(ui);
+        //General stuff
+        op.Set();
+        
+        //UI stuff
+        ui.NewFrame();
         ui.Simple_window(op, l_src, my_rend.m_w, my_rend.m_h);
-        ui.log_window(op.Get_MV());
-        ui.log_window(op.Get_MVP());
-    
+        ui.log_window(op.Get_Model(), false);
         
-        tst.Set_Op(op, l_src);
-        my_rend.Draw(tst);
-        //ats.m_sh.bind();
-        //ats.Set_Op(op, l_src);
-        //my_rend.Draw_Instanced(ats, GL_TRIANGLES,num_atoms);
-        //
-        //bds.Set_Op(op, l_src);
-        //my_rend.Draw_Instanced(bds, GL_TRIANGLES, bds.num_bonds);
-        //BB.m_sh.bind();
-        //BB.Set_Op(op, l_src);
-        //my_rend.Draw(BB);
         
-        //qd.m_sh.bind();
-        //qd.Set_Op(op, l_src);
-        //glUniform3f(tr_loc2, 0.5*cos(dx),0.0,0.0);
-        //my_rend.Draw(qd, GL_TRIANGLES);
-    
+        //Draw Pass
+        my_rend.Draw_Pass();
         
-   
-  
-        if(!(counter%5)){
-            dx+=0.314;
-        }
-        counter++;
+        // I need to bind the shadow map texture
+        //env.Attach_Shadow_Map_Texture(sm);
+        // and other textures
+        
+        
+        vox.Set_Shader(op, l_src);
+        vox.Draw();
+        
+        //UI render
         ui.render();
         my_rend.poll();
         
     }
     
 
+    
     
     return 0;
 }

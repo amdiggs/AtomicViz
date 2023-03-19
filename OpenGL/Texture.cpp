@@ -15,418 +15,278 @@
 #include "stb_image.h"
 
 extern int num_atoms;
+const std::string Image_Folder =  "/Users/diggs/Desktop/OpenGL/OTHER/";
 
 static unsigned int seed = (unsigned int)std::chrono::system_clock::now().time_since_epoch().count();
 std::minstd_rand0 gen (seed);
 std::uniform_int_distribution<> color(0,255);
 
 
-Texture::Texture(){}
+Texture::Texture(int layer)
+:m_layer(layer)
+{}
 
 Texture::~Texture() {
-    for (int i = 0; i<m_count; i++){
-    glDeleteTextures(1, &m_ID[i]);
-    }
-    //glDeleteTextures(1, &m_ID[1]);
-    //glDeleteBuffers(1, &m_TBO);
-    //glDeleteTextures(1, &m_TEX_ID);
+    glDeleteTextures(1, &m_ID);
 }
 
-void Texture::Bind(int layer) {
-    glActiveTexture(GL_TEXTURE0 + layer);
-    glBindTexture(GL_TEXTURE_2D, m_ID[layer]);
+void Texture::Bind() const {
+    glActiveTexture(GL_TEXTURE0 + m_layer);
+    glBindTexture(GL_TEXTURE_2D, m_ID);
 }
 
 
-
-
-void Texture::Gen_Noise(int layer){
-    GLubyte RGBA_Data[IW][IW][4];
-    int value= 100;
-    for (int i = 0; i< IW; i++){
-        for (int j= 0; j<IW; j++){
-            value = Rand::Get().r_uni_int(150, 255);
-            
-            RGBA_Data[i][j][0] = value;
-            RGBA_Data[i][j][1] = value;
-            RGBA_Data[i][j][2] = value;
-            RGBA_Data[i][j][3] = value;
-            
-        }
-    }
-    Gen_Tex_2D(layer,(void*)RGBA_Data, IW, IW);
+void Texture::UnBind() const {
+    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void Texture::Gen_Gauss(int layer) {
-    GLubyte RGBA_Data[IW][IW][4];
-    int value;
-    float x,y, rs;
-    float sigma = 0.35;
-    for (int i = 0; i< IW; i++){
-        y = float(i)/float(IW);
-        for (int j= 0; j<IW; j++){
-            x = float(j)/float(IW);
-            rs = (x-0.5)*(x-0.5) + (y-0.5)*(y-0.5);
-            value = (int)(sin(5*x)*exp((-rs)/sigma)*255.0);
-            
-            RGBA_Data[i][j][0] = value;
-            RGBA_Data[i][j][1] = value;
-            RGBA_Data[i][j][2] = value;
-            if (value > 25){
-                RGBA_Data[i][j][3] = value;
-            }
-            else{RGBA_Data[i][j][3] = 0;}
-            
-        }
-    }
-    Gen_Tex_2D(layer,(void*)RGBA_Data, IW, IW);
+void Texture::Gen_Tex_2D(void* dat){
     
-}
-
-
-
-
-void Texture::Gen_Tex_2D(int layer, void* dat, int rows, int cols){
+    glGenTextures(1, &m_ID);
+    glActiveTexture(GL_TEXTURE0 + m_layer);
+    glBindTexture(GL_TEXTURE_2D, m_ID);
+    if(m_bpp == 4){
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, m_w, m_h, 0, GL_RGBA, GL_UNSIGNED_BYTE, dat);
+    }
+    else if(m_bpp == 3){
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, m_w, m_h, 0, GL_RGB, GL_UNSIGNED_BYTE, dat);
+    }
+    else{
+        std::cout << "bits per pixel error" << std::endl;
+        exit(4);
+    }
     
-    glGenTextures(1, &m_ID[layer]);
-    glActiveTexture(GL_TEXTURE0 + layer);
-    glBindTexture(GL_TEXTURE_2D, m_ID[layer]);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, rows, cols, 0, GL_RGBA, GL_UNSIGNED_BYTE, dat);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
     glBindTexture(GL_TEXTURE_2D, 0);
-    m_count++;
+    
     
 }
 
-void Texture::Image_Texture(int layer, std::string image) {
-    int w, h, bpp;
-    std::string _file = SRCS + image;
-    unsigned char* image_data = stbi_load(_file.c_str(), &w, &h, &bpp, 0);
+
+void Texture::Load(std::string image) {
+    stbi_set_flip_vertically_on_load(1);
+    std::string _file = Image_Folder + image;
+    unsigned char* image_data = stbi_load(_file.c_str(), &m_w, &m_h, &m_bpp, 0);
     
     if(!image_data){
         std::cout << "COULD NOT LOAD IMAGE " << _file << std::endl;
         exit(2);
     }
     
-    Gen_Tex_2D(layer, (void*)image_data, w, h);
+    Gen_Tex_2D((void*)image_data);
+    
+    stbi_image_free(image_data);
+}
+
+int Texture::Get_ID() const{
+    return m_ID;
+}
+
+int Texture::Get_Layer() const{
+    return m_layer;
+}
+
+
+//=======3D Texture class==============================================================
+Texture3D::Texture3D(int layer)
+:m_layer(layer)
+{}
+
+Texture3D::~Texture3D() {
+    glDeleteTextures(1, &m_ID);
+}
+
+void Texture3D::Bind() const {
+    glActiveTexture(GL_TEXTURE0 + m_layer);
+    glBindTexture(GL_TEXTURE_3D, m_ID);
+}
+
+
+void Texture3D::UnBind() const {
+    glBindTexture(GL_TEXTURE_3D, 0);
+}
+
+void Texture3D::Gen_Tex_3D(void* dat){
+    
+    glGenTextures(1, &m_ID);
+    glActiveTexture(GL_TEXTURE0 + m_layer);
+    glBindTexture(GL_TEXTURE_3D, m_ID);
+    if(m_bpp == 4){
+        glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA8, m_w, m_h, m_z, 0, GL_RGBA, GL_UNSIGNED_BYTE, dat);
+    }
+    else if(m_bpp == 3){
+        glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB8, m_w, m_h, m_z, 0, GL_RGB, GL_UNSIGNED_BYTE, dat);
+    }
+    else{
+        std::cout << "bits per pixel error" << std::endl;
+        exit(4);
+    }
+    
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_MIRRORED_REPEAT);
+    glBindTexture(GL_TEXTURE_3D, 0);
+    
+    
+}
+
+
+void Texture3D::Load(std::string image) {
+    stbi_set_flip_vertically_on_load(1);
+    std::string _file = Image_Folder + image;
+    unsigned char* image_data = stbi_load(_file.c_str(), &m_w, &m_h, &m_bpp, 0);
+    
+    if(!image_data){
+        std::cout << "COULD NOT LOAD IMAGE " << _file << std::endl;
+        exit(2);
+    }
+    
+    Gen_Tex_3D((void*)image_data);
+    
+    stbi_image_free(image_data);
+}
+
+int Texture3D::Get_ID() const{
+    return m_ID;
+}
+
+int Texture3D::Get_Layer() const{
+    return m_layer;
+}
+
+
+void Texture3D::Simple_Test(){
+    m_w = IW;
+    m_h = IW;
+    m_z = IW;
+    m_bpp = 3;
+    GLubyte RGB_Data[IW][IW][IW][3];
+    for (int i = 0; i< IW; i++){
+        for (int j= 0; j<IW; j++){
+            for (int k = 0; k<IW; k++){
+            
+                RGB_Data[i][j][k][0] = i*2;
+                RGB_Data[i][j][k][1] = i*2;
+                RGB_Data[i][j][k][2] = k*2;
+            }
+        }
+    }
+    Gen_Tex_3D((void*)RGB_Data);
+}
+
+
+void Texture3D::Cavity(){
+    m_w = IW;
+    m_h = IW;
+    m_z = IW;
+    m_bpp = 3;
+    GLubyte RGB_Data[IW][IW][IW][3];
+    float dist;
+    for (int i = 0; i< IW; i++){
+        for (int j= 0; j<IW; j++){
+            for (int k = 0; k<IW; k++){
+                float lsq = (i-64)*(i-64) + (j-64)*(j-64) + (k-64)*(k-64);
+                dist = sqrt(lsq);
+                if(dist < 64.0){
+                    RGB_Data[i][j][k][0] = 100;
+                    RGB_Data[i][j][k][1] = 0;
+                    RGB_Data[i][j][k][2] = 0;
+                }
+                else{
+                    RGB_Data[i][j][k][0] = 0;
+                    RGB_Data[i][j][k][1] = 0;
+                    RGB_Data[i][j][k][2] = 0;
+                    }
+            }
+        }
+    }
+    Gen_Tex_3D((void*)RGB_Data);
 }
 
 
 
-void Texture::Image_Texture_RGB(int layer, std::string image) {
+void Texture3D::Cavity(AMD::Vec3* vecs, int num_vecs, AMD::Vec3 box_bounds){
+    m_w = IW;
+    m_h = IW;
+    m_z = IW;
+    m_bpp = 3;
+    GLubyte RGB_Data[IW][IW][IW][3];
+    for (int i = 0; i< IW; i++){
+        for (int j= 0; j<IW; j++){
+            for (int k = 0; k<IW; k++){
+                    RGB_Data[i][j][k][0] = 0;
+                    RGB_Data[i][j][k][1] = 0;
+                    RGB_Data[i][j][k][2] = 0;
+            }
+        }
+    }
+    float sx = m_w/box_bounds.x;
+    float sy = m_h/box_bounds.y;
+    float sz = m_z/box_bounds.z;
+    float dist;
+    int center[3];
+    for (int i = 0; i < num_vecs; i++){
+        center[0] = int(vecs[i].x*sx) + m_w/2;
+        center[1] = int(vecs[i].y*sy) + m_h/2;
+        center[2] = int(vecs[i].z*sz) + m_z/2;
+        for (int j = -32; j< 32; j++){
+            for (int k= -32; k<32; k++){
+                for (int n = -32; n<32; n++){
+                    int a = center[0] + j;
+                    int b = center[1] + k;
+                    int c = center[2] + n;
+                    if(a<0 || b<0 || c<0 || a > m_w -1 || b > m_h -1 || c > m_z - 1){continue;}
+                    dist = sqrt(j*j + k*k +n*n);
+                    if(dist < 32){
+                        RGB_Data[a][b][c][0] = 255;
+                        RGB_Data[a][b][c][1] = 0;
+                        RGB_Data[a][b][c][2] = 0;
+                    }
+                    else{continue;}
+                }
+            }
+        }
+        
+    }
+    
+    Gen_Tex_3D((void*)RGB_Data);
+}
+
+
+
+
+
+
+/*
+void Texture::Load_RGB(int layer, std::string image) {
     int w, h, bpp;
     stbi_set_flip_vertically_on_load(true);
-    std::string _file = SRCS + image;
+    std::string _file = Image_Folder + image;
     unsigned char* image_data = stbi_load(_file.c_str(), &w, &h, &bpp, 0);
-    
+    unsigned long s = sizeof(image_data);
     if(!image_data){
         std::cout << "COULD NOT LOAD IMAGE " << _file << std::endl;
         exit(2);
     }
     
-    glGenTextures(1, &m_ID[layer]);
+    glGenTextures(1, &m_ID);
     glActiveTexture(GL_TEXTURE0 + layer);
-    glBindTexture(GL_TEXTURE_2D, m_ID[layer]);
+    glBindTexture(GL_TEXTURE_2D, m_ID);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, image_data);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glBindTexture(GL_TEXTURE_2D, 0);
-    m_count++;
-}
-
-int Texture::Get_ID(int layer){
-    return m_ID[layer];
-}
-
-void Texture::UnBind() { 
-    glBindTexture(GL_TEXTURE_2D, 0);
-}
-
-
-
-/*
- void Texture::bind_multi(int layer) {
-     glActiveTexture(GL_TEXTURE0 + layer);
-     glBindTexture(GL_TEXTURE_2D, m_ID[layer]);
-     glActiveTexture(GL_TEXTURE0 + layer + 1);
-     glBindTexture(GL_TEXTURE_2D, m_ID[layer +1]);
-     glActiveTexture(GL_TEXTURE0 + layer + 2);
-     glBindTexture(GL_TEXTURE_2D, m_ID[layer +2]);
-     glUniform1iv(multi_loc,3, samplers);
- }
- 
- 
- void Texture::Off_set(Atom* ats, const Shader& sh){
-     GLfloat TBData[500][4];
-     u_locs[0] = sh.UniformLoc("off_set");
-     AMD::Vec3 temp;
-     for (int i = 0; i< num_atoms; i++){
-         temp = ats[i].get_coords();
-         TBData[i][0] =temp.x;
-         TBData[i][1] = temp.y;
-         TBData[i][2] = temp.z;
-         TBData[i][3] = float(ats[i].get_type());
-             
-         
-     }
-     
-     glGenBuffers(1,&m_TBO);
-     glBindBuffer(GL_TEXTURE_BUFFER, m_TBO);
-     glBufferData(GL_TEXTURE_BUFFER, sizeof(TBData), TBData, GL_STATIC_DRAW);
-     
-     glGenTextures(1, &m_TEX_ID);
-     glActiveTexture(GL_TEXTURE0);
-     glBindTexture(GL_TEXTURE_BUFFER, m_TEX_ID);
-     glTexBuffer(GL_TEXTURE_BUFFER,GL_RGBA32F, m_TBO);
-     
-     glBindBuffer(GL_TEXTURE_BUFFER, 0);
-     glUniform1i(u_locs[0], 0);
-     
- }
- 
- void Texture::axis_texture(int layer, const Shader& sh) {
-     int row = 128; int col = 128;
-     GLubyte RGBA_Data[128][128][4];
-     //u_locs[layer] = sh.UniformLoc("Axis_Texture");
-     multi_loc = sh.UniformLoc("Axis_Texture");
-     X_hat(RGBA_Data);
-     Gen_Tex_2D(layer,(void*)RGBA_Data, row, col);
-     Y_hat(RGBA_Data);
-     Gen_Tex_2D(layer+1,(void*)RGBA_Data, row, col);
-     Z_hat(RGBA_Data);
-     Gen_Tex_2D(layer+2,(void*)RGBA_Data, row, col);
-     glUniform1iv(multi_loc,3, samplers);
- }
- 
- void Texture::Gen_Gaussian(int layer, const Shader &sh) {
-     GLubyte RGBA_Data[IW][IW][4];
-     int value;
-     float x,y, rs;
-     float sigma = 0.1;
-     for (int i = 0; i< IW; i++){
-         y = float(i)/float(IW);
-         for (int j= 0; j<IW; j++){
-             x = float(j)/float(IW);
-             rs = (x-0.5)*(x-0.5) + (y-0.5)*(y-0.5);
-             value = (int)(exp((-rs)/sigma)*255.0);
-             
-             RGBA_Data[i][j][0] = value;
-             RGBA_Data[i][j][1] = value;
-             RGBA_Data[i][j][2] = value;
-             if (value > 25){
-                 RGBA_Data[i][j][3] = value;
-             }
-             else{RGBA_Data[i][j][3] = 0;}
-             
-         }
-     }
-     Gen_Tex_2D(layer,(void*)RGBA_Data, IW, IW);
-     
- }
-
-
- */
-
-Rand& Rand::Get(){
-    static Rand inst;
-    return inst;
-}
-
-double Rand::r_u_d(double lb, double ub){
-    std::uniform_real_distribution<double> test_dist(lb, ub);
-    return test_dist(gen);
+    
+    stbi_image_free(image_data);
     
 }
 
+*/
 
-double Rand::rand_normal_color(){
-    std::normal_distribution<double> trap(2.0, 0.2);
-    double val =  trap(gen);
-    if (val > 4.0){
-        val = 4.0;
-    }
-    
-    else if (val < 0.0){
-        val = 0.0;
-    }
-    
-    return val/4.0;
-}
-
-double Rand::return_rate(){
-    std::exponential_distribution<double> ret(0.4);
-    return ret(gen);
-}
-
-double Rand::escape_rate(){
-    std::normal_distribution<double> esc(0.6, 0.2);
-    return esc(gen);
-}
-
-double Rand::get_time(double rt){
-    double tau = Rand::Get().r_u_d(0.0, 1.0);
-    return (1.0/rt)*log(1.0/tau);
-    
-}
-
-
-int Rand::r_uni_int(int lb, int ub){
-    std::uniform_int_distribution<> l_int(lb,ub);
-    return l_int(gen);
-}
-
-
-
-int Rand::rand_color(){return color(gen);}
-
-
-float Letter_Check(int i, int j, char lett){
-    float x = float(j);
-    float y = float(abs(64 - i));
-    float w,z;
-    switch (lett) {
-        case 'x':
-            if (j<1 || j > 64) {
-                return 0.0;
-            }
-            w = abs((2.0*x)-y)/10.0;
-            z = abs(((2.0*x)-64) + y)/10.0;
-            if (z >1.0){
-                z = 1.0;
-            }
-            if(w>1.0){
-                w= 1.0;
-            }
-            return (2.0 - (z + w));
-
-            break;
-            
-        default:
-            return 0.0;
-            break;
-    }
-    
-    
-    
-}
-
-
-
-void X_hat(GLubyte (*dat)[128][4]){
-    int row = 128; int col = 128;
-    int value = 255;
-    for (int i = 0; i< row; i++){
-        for (int j= 0; j<col; j++){
-            if (i<=64){
-                if(i>36){
-                    if(j>24 && j<106){
-                        if((abs(2*i - (j+10)) <= 2) || (abs(2*(i-64) + (j-10)) <= 2)){value = 0;}
-                        else{value=255;}
-                    }
-                    else{value=255;}
-                }
-            }
-            else if(i== 65 || i ==66 || i == 67 || i == 68 || i>122){
-                if((j>26&& j<44) || (j > 82 && j<100)){
-                    value = 0;
-                }
-                    else{value=255;}
-                }
-            else if(abs(i - (j+32)) <=2 || abs((i-128) + (j-32)) <=2){
-                value = 0;
-            }
-            else{value = 255;}
-            dat[i][j][0] = 255 - value;
-            dat[i][j][1] = 255 - value;
-            dat[i][j][2] = 255 - value;
-            dat[i][j][3] = 255 - value;
-            
-        }
-        
-        
-        
-
-    }
-}
-
-
-void Y_hat(GLubyte (*dat)[128][4]){
-    int row = 128; int col = 128;
-    int value = 255;
-    for (int i = 0; i< row; i++){
-        for (int j= 0; j<col; j++){
-            if (i<=64){
-                if(i>36){
-                    if(j>24 && j<106){
-                        if((abs(2*i - (j+10)) <= 2) || (abs(2*(i-64) + (j-10)) <= 2)){value = 0;}
-                        else{value=255;}
-                    }
-                    else{value=255;}
-                }
-            }
-            else if (i>96){
-                if (j>61 && j<67) {value = 0;}
-                else{value=255;}
-            }
-            else if(i== 65 || i ==66 || i == 67 || i == 68){
-                if((j>26&& j<44) || (j > 82 && j<100)){
-                    value = 0;
-                }
-                    else{value=255;}
-                }
-            else if(abs(i - (j+32)) <=2 || abs((i-128) + (j-32)) <=2){
-                value = 0;
-            }
-            else{value = 255;}
-            dat[i][j][0] = 255 - value;
-            dat[i][j][1] = 255 - value;
-            dat[i][j][2] = 255 - value;
-            dat[i][j][3] = 255 - value;
-            
-        }
-        
-        
-        
-
-    }
-}
-
-
-
-void Z_hat(GLubyte (*dat)[128][4]){
-    int row = 128; int col = 128;
-    int value = 255;
-    for (int i = 0; i< row; i++){
-        for (int j= 0; j<col; j++){
-            if (i<=64){
-                if(i>36){
-                    if(j>30 && j<106){
-                        if((abs(2*i - (j+10)) <= 2) || (abs(2*(i-64) + (j-10)) <= 2)){value = 0;}
-                        else{value=255;}
-                    }
-                    else{value=255;}
-                }
-            }
-            else if((i>64 && i<69) || (i>118 && i<123)){
-                if(j>26 && j<96){value = 0;}
-                else{value=255;}
-                }
-            else if(abs(i - (j+32)) <=2 && i<119){value = 0;}
-            else{value = 255;}
-            dat[i][j][0] = 255 - value;
-            dat[i][j][1] = 255 - value;
-            dat[i][j][2] = 255 - value;
-            dat[i][j][3] = 255 - value;
-            
-        }
-        
-        
-        
-
-    }
-}

@@ -18,9 +18,6 @@
 #include "My_Types.hpp"
 
 
-#define _2pi 6.283185307
-#define PI 3.141592654
-#define PI_2 1.5707963
 
 #define MAX_VERTS 10000
 #define MAX_IDX 50000
@@ -35,7 +32,7 @@ protected:
     int m_num_idx;
     int m_num_verts;
     const int m_num_theta = 60;
-    const float m_dth = _2pi/m_num_theta;
+    const float m_dth = twoPI/m_num_theta;
     void Gen_cyl_index(int off_set);
     void Gen_fan_index(int count, int tip);
 public:
@@ -80,34 +77,111 @@ private:
     
 public:
     Cube();
+    Cube(float len);
     Cube(AMD::Vec3 BB);
     ~Cube();
     AMD::Vertex verts[8];
     unsigned int indices[36] = {
         // front
-        0, 1, 2,
-        2, 3, 0,
+        0, 3, 2,
+        2, 1, 0,
         // right
-        1, 5, 6,
-        6, 2, 1,
+        1, 2, 6,
+        6, 5, 1,
         // back
-        7, 6, 5,
-        5, 4, 7,
+        4, 5, 6,
+        6, 7, 4,
         // left
-        4, 0, 3,
-        3, 7, 4,
+        4, 7, 3,
+        3, 0, 4,
         // bottom
-        4, 5, 1,
-        1, 0, 4,
+        0, 4, 5,
+        5, 1, 0,
         // top
-        3, 2, 6,
-        6, 7, 3
+        3, 7, 6,
+        6, 3, 2
     };
+    
+    
+    /*
+     
+          7-------6
+         /|       /
+        / |      /
+       3--|-----2
+       |  4------5
+       |       |
+       0-------1
+     
+     
+        {0,1,2}, {0,2,3}, {0,1,4}, {1,4,5},
+        {2,3,7}, {2,6,7}, {1,2,5}, {1,5,6},
+        {0,3,4}, {3,4,7}, {4,5,6}, {4,6,7}
+     */
+    
     
     int num_idx();
     int num_verts();
+};
+
+
+class Volume_XY{
+private:
+    void Gen_Verts(int num_slices);
+    int m_num_verts = 0;
+    int m_num_idx = 0;
+    AMD::Vec3 m_dimensions;
     
+public:
+    Volume_XY(AMD::Vec3 dim, int num_slices);
+    Volume_XY(float w, float h, float d, int num_slices);
+    ~Volume_XY();
     
+    AMD::Vertex verts[MAX_VERTS];
+    unsigned int indices[MAX_IDX];
+    int num_idx();
+    int num_verts();
+};
+
+//====================================================
+
+class Volume_XZ{
+private:
+    void Gen_Verts(int num_slices);
+    int m_num_verts = 0;
+    int m_num_idx = 0;
+    AMD::Vec3 m_dimensions;
+    
+public:
+    Volume_XZ(AMD::Vec3 dim, int num_slices);
+    Volume_XZ(float w, float h, float d, int num_slices);
+    ~Volume_XZ();
+    
+    AMD::Vertex verts[MAX_VERTS];
+    unsigned int indices[MAX_IDX];
+    int num_idx();
+    int num_verts();
+};
+
+
+
+class Voxel_Grid{
+private:
+    void Gen_Verts();
+    int m_num_verts = 0;
+    int m_num_idx = 0;
+    AMD::Vec3 m_dimensions;
+    int m_num_y, m_num_z;
+    
+public:
+    Voxel_Grid(AMD::Vec3 dim, int num_y, int num_z);
+    Voxel_Grid(float w, float h, float d, int num_y, int num_z);
+    ~Voxel_Grid();
+    
+    AMD::Vertex verts[MAX_VERTS];
+    unsigned int indices[MAX_IDX];
+    int num_idx();
+    int num_verts();
     
     
 };
@@ -122,15 +196,14 @@ private:
 public:
     Quad();
     Quad(float s);
+    Quad(float s, float z);
     Quad(AMD::Vec3 A, AMD::Vec3 B, AMD::Vec3 C, AMD::Vec3 D, const char* cw);
     
     AMD::Vertex verts[4];
-    unsigned int indices[6] = {0,1,2,0,2,3};
+    unsigned int indices[6] = {0,1,2,2,3,0};
     int num_idx();
     int num_verts();
 };
-
-
 
 
 class Sphere : public SHAPE{
@@ -265,19 +338,15 @@ private:
     const int m_num_theta = 20;
     int m_num_idx;
     int m_num_verts;
+    AMD::Vec4 m_color;
+    
     void gen_points(const Arrow& ar);
     void gen_points(const Sphere& sp);
-    void gen_quad();
-    void Gen_Sphere();
-    void Gen_Arrow(char axis);
-    AMD::Vec4 m_color;
-    AMD::Mat4 r_mat;
-    void Coordinate_Transform();
-    void Rotation();
     
     
 public:
     Axis();
+    Axis(float len);
     ~Axis();
     AMD::Vertex verts[max_verts];
     unsigned int indices[max_indices];

@@ -97,6 +97,11 @@ Vec3::Vec3()
 :x(0.0), y(0.0), z(0.0)
 {}
 
+
+Vec3::Vec3(float s)
+:x(s) , y(s) , z(s)
+{}
+
 Vec3::Vec3(float e_x, float e_y, float e_z)
 :x(e_x), y(e_y),z(e_z)
 {}
@@ -138,11 +143,22 @@ AMD::Vec3 &Vec3::operator=(const AMD::Vec3 &other) {
     return *this;
 }
 
-AMD::Vec3 Vec3::operator*(float scale) { 
+
+
+
+AMD::Vec3 &Vec3::operator=(const AMD::Quat &other) {
+        this->x = other.x;
+        this->y = other.y;
+        this->z = other.z;
+    return *this;
+}
+
+
+AMD::Vec3 Vec3::operator*(float scale) const{ 
     return Vec3(x*scale,y*scale, z*scale);
 }
 
-AMD::Vec3 Vec3::operator/(float div) { 
+AMD::Vec3 Vec3::operator/(float div) const{
     return Vec3(x/div,y/div,z/div);
 }
 
@@ -194,8 +210,38 @@ void AMD::Vec3::Reset(){
     z = 0.0;
 }
 
+void AMD::Vec3::Normalize(){
+    float N = this->len();
+    *this = (*this)/N;
+}
+
+
+
+void AMD::Vec3::Rotate_Quaternion(const Vec3& axis, float ang){
+    AMD::Quat q(ang, axis);
+    AMD::Quat qi = q.inverse();
+    AMD::Quat q_this(*this);
+    AMD::Quat temp = q*q_this*qi;
+    *this = temp;
+    
+}
+
+
+void AMD::Vec3::Vround(int decimals){
+    x = Round(x, decimals);
+    y = Round(y, decimals);
+    z = Round(z, decimals);
+}
+
+//========================================================================================================
+
 Vec4::Vec4()
 :r(0.0) , g(0.0) , b(0.0) , a(0.0)
+{}
+
+
+Vec4::Vec4(float s)
+:r(s) , g(s) , b(s) , a(s)
 {}
 
 Vec4::Vec4(float e_r, float e_g, float e_b, float e_a)
@@ -231,6 +277,63 @@ void AMD::Vec4::Reset(){
     g = 0.0;
     b = 0.0;
     a = 0.0;
+}
+
+
+
+
+//=========Quaternions==================================
+
+Quat::Quat()
+:w(0.0), x(0.0), y(0.0), z(0.0)
+{}
+
+Quat::Quat(float ew, float ex, float ey, float ez)
+:w(ew), x(ex), y(ey), z(ez)
+{}
+
+Quat::Quat(Vec3 coords)
+:w(0.0), x(coords.x), y(coords.y), z(coords.z)
+{}
+
+Quat::Quat(float ang, Vec3 coords)
+:w(cos(ang/2.0)), x(sin(ang/2.0)*coords.x), y(sin(ang/2.0)*coords.y), z(sin(ang/2.0)* coords.z)
+{}
+
+Quat::~Quat(){}
+
+float* Quat::get(){
+    return &w;
+}
+
+
+float& Quat::operator[](const int& index){
+    return get()[index];
+}
+
+AMD::Quat Quat::inverse(){
+    return Quat(w, -x, -y, -z);
+}
+
+AMD::Quat& Quat::operator=(const Quat& other){
+    if (&other == this){
+        return  *this;
+    }
+    else {
+        this->w = other.w;
+        this->x = other.x;
+        this->y = other.y;
+        this->z = other.z;
+    }
+    return *this;
+}
+
+AMD::Quat AMD::operator*(const Quat& L, const Quat& R){
+    float _w = L.w*R.w - L.x*R.x - L.y*R.y - L.z*R.z;
+    float _x = L.w*R.x + L.x*R.w + L.y*R.z - L.z*R.y;
+    float _y = L.w*R.y + L.y*R.w + L.z*R.x - L.x*R.z;
+    float _z = L.w*R.z + L.z*R.w + L.x*R.y - L.y*R.x;
+    return Quat(_w, _x, _y, _z);
 }
 
 //==============MATRICIES==========================================
@@ -357,6 +460,16 @@ void Mat3::Scale(AMD::Vec3 vec) {
     
     
     return;
+}
+
+void Mat3::Transpose(){
+    Mat3 temp = *this;
+    
+    for (int i = 0; i< n; i++) {
+        for (int j = 0; j < n; j++) {
+                m[i][j] = temp.m[j][i];
+        }
+    }
 }
 
 void Mat3::print() {
@@ -493,6 +606,24 @@ void Mat4::assign_row(int row_idx, Vec4 row){
 }
 
 
+
+void Mat4::assign_col(int col_idx, Vec3 col){
+    
+    for (int i = 0; i<3; i++){
+        m[i][col_idx] = col[i];
+    }
+    
+}
+
+void Mat4::assign_row(int row_idx, Vec3 row){
+    
+    for (int i = 0; i<3; i++){
+        m[row_idx][i] = row[i];
+    }
+    
+}
+
+
 void Mat4::Rotate(Vec3 ang){
     float a = ang.x; float b = ang.y; float c = ang.z;
     AMD::Mat4 rot;
@@ -539,6 +670,19 @@ void Mat4::Transpose(){
     }
 }
 
+
+void Mat4::Reset(){
+    for (int i = 0; i< 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            if (i == j){
+                m[i][j] = 1.0;
+            }
+            else{m[i][j] = 0.0;}
+        }
+    }
+    
+}
+
 AMD::Mat4 ID(){
     return Mat4();
 }
@@ -562,15 +706,29 @@ AMD::Mat4 AMD::ROTATION_MATRIX(Vec3 ang){
     return rot;
 }
 
-float AMD::Get_angle(const Vec3& A, const Vec3& B){
-    float c_th= A.dot(B)/(A.len()*B.len());
-    if (c_th < 0){
-    return acos(c_th);
+
+float AMD::Round(float val, int num_decimal){
+    float mod = 10.0;
+    for( int i = 0; i<num_decimal; i++){
+        mod*=10.0;
     }
-    else{return acos(c_th);}
+    int temp = (int)(val*mod);
+    return (float)temp / mod;
 }
 
+float AMD::Get_angle(const Vec3& A, const Vec3& B){
+    if(A.len() <= 0.00001 || B.len() <= 0.00001){
+        return 1.57079;
+    }
+    else{
+        float c_th = A.dot(B)/(A.len()*B.len());
+        return acos(c_th);
+    }
+}
 
+AMD::Vec3 AMD::Round(const Vec3& vec, int decimals){
+    return AMD::Vec3(Round(vec.x, decimals),Round(vec.y, decimals),Round(vec.z, decimals));
+}
 
 
 
@@ -641,4 +799,60 @@ AMD::Vertex Vertex::off_set(Vec3 vec){
     return *this;
 }
 
+
+AMD::Mat4 AMD::Perspective_Matrix(Vec4 vec){
+    Mat4 Proj_mat;
+    float near = vec.b;
+    float far = vec.a;
+    float alpha = 3.14159/4;
+    float a = 1.0 / (tan(alpha));
+    float b = a*(16.0/9.0);
+    
+    
+    Proj_mat[0][0] = a;
+    Proj_mat[1][1] = b;
+    Proj_mat[2][2] = (1.0*far) / (far - near);
+    Proj_mat[2][3] = (-2.0*far*near) / (far - near);
+    Proj_mat[3][2] = 1.0;
+    Proj_mat[3][3] = 0.0;
+    
+    return Proj_mat;
+}
+
+
+AMD::Mat4 AMD::Orthographic_Matrix(Vec4 vec){
+    Mat4 Proj_mat;
+    
+    float left = vec.r;
+    float top = vec.g*(9.0/16.0);
+    float near = vec.b;
+    float far = vec.a;
+    
+    
+    Proj_mat[0][0] = 1.0/ left;
+    Proj_mat[1][1] = 1.0/ top;
+    Proj_mat[2][2] = 2.0 / (far - near);
+    Proj_mat[2][3] = (-1.0*(far+near)) / (far - near);
+    Proj_mat[3][2] = 0.0;
+    Proj_mat[3][3] = 1.0;
+    
+    return Proj_mat;
+}
+
+
+AMD::Mat4 AMD::Projection(Projection_Type typ, AMD::Vec4 vec){
+    switch (typ) {
+        case Perspective:
+            return Perspective_Matrix(vec);
+            break;
+            
+        case Orthographic:
+            return Orthographic_Matrix(vec);
+            break;
+            
+        default:
+            return AMD::Mat4();
+    }
+    
+}
 

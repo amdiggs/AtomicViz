@@ -11,14 +11,18 @@
 #include "shader.hpp"
 #include "Atomic.hpp"
 #include "Simulation.hpp"
+#include "FrameBuffer.hpp"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
+#define STB_TRUETYPE_IMPLEMENTATION
+#include "stb_truetype.h"
+
 
 bool save = false;
-static void glfw_error_callback(int error, const char* description)
-{
-    fprintf(stderr, "Glfw Error %d: %s\n", error, description);
-}
+static AMD::Vec4 CC(1.0,1.0,1.0,1.0);
+int Ww =0;
+int Wh = 0;
+
 
 ImGuiIO& init_io(){
     IMGUI_CHECKVERSION();
@@ -34,14 +38,8 @@ Renderer::Renderer(int w, int l, const char* name, GLFWmonitor* monitor, GLFWwin
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHintString(GLFW_COCOA_FRAME_NAME, "testframe");
-    m_cc = AMD::Vec4(1.0, 1.0, 1.0, 0.0);
-    this -> m_primary_window = glfwCreateWindow(w, l, name, monitor, NULL);
-    check(m_primary_window);
-    if(Multi_Window){
-        this-> m_second_window = glfwCreateWindow(200, 900, "UI_window", monitor, m_primary_window);
-        check(m_second_window);
-    }
-    else{this-> m_second_window = NULL;}
+    this -> m_Window = glfwCreateWindow(w, l, name, monitor, NULL);
+    check(m_Window);
     set_context();
 
     
@@ -68,167 +66,50 @@ void Renderer::check(GLFWwindow* window){
 
 
 void Renderer::set_context(){
-    glfwMakeContextCurrent(m_primary_window);
+    glfwMakeContextCurrent(m_Window);
     glfwSwapInterval(1);
     glewExperimental = GL_TRUE;
     glewInit();
+    glfwGetFramebufferSize(m_Window, &Ww, &Wh);
 }
 
-void Renderer::set_color(float clr[4]) {
-    m_cc[0] = clr[0]; m_cc[1] = clr[1];
-    m_cc[2] = clr[2]; m_cc[3] = clr[3];
-}
-
-void Renderer::set_color(AMD::Vec4 clr){
-    m_cc[0] = clr[0]; m_cc[1] = clr[1];
-    m_cc[2] = clr[2]; m_cc[3] = clr[3];
-}
-
-void Renderer::clear(UI_Window& ui){
-    set_color(ui.get_color());
-    glClearColor(m_cc[0], m_cc[1], m_cc[2], 0.0);
+void Renderer::Draw_Pass(){
+    glClearColor(CC[0], CC[1], CC[2], 0.0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glfwGetFramebufferSize(m_Window, &Ww, &Wh);
+    glViewport(0, 0, Ww, Wh);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_FRONT);
+    glDisable(GL_CULL_FACE);
+    //glEnable(GL_CULL_FACE);
+    //glCullFace(GL_BACK);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    ui.NewFrame();
-}
-
-void Renderer::Draw_Instanced(IndexBuffer& ib, VertexArray& va, Shader& sh, GLenum draw_type, int num){
-    glfwGetFramebufferSize(m_primary_window, &m_w, &m_h);
-    glViewport(0, 0, m_w, m_h);
-    glUniform2f(m_res_loc,float(m_w),float(m_h));
-    sh.bind();
-    va.bind();
-    ib.bind();
-    glDrawElementsInstanced(draw_type,ib.get_num(), GL_UNSIGNED_INT,0, num);
-    
-}
-void Renderer::Draw_Instanced(Ensamble_Of_Atoms& ats, GLenum draw_type, int num){
-    glfwGetFramebufferSize(m_primary_window, &m_w, &m_h);
-    glViewport(0, 0, m_w, m_h);
-    ats.DrawBind();
-    glDrawElementsInstanced(draw_type,ats.num_idx(), GL_UNSIGNED_INT,0, num);
-    
-}
-
-void Renderer::Draw_Instanced(Bonds& bds, GLenum draw_type, int num){
-    glfwGetFramebufferSize(m_primary_window, &m_w, &m_h);
-    glViewport(0, 0, m_w, m_h);
-    bds.DrawBind();
-    glDrawElementsInstanced(draw_type,bds.num_idx(), GL_UNSIGNED_INT,0, num);
-    
-}
-
-void Renderer::Draw(IndexBuffer& ib, VertexArray& va, Shader& sh, GLenum draw_type){
-    glfwGetFramebufferSize(m_primary_window, &m_w, &m_h);
-    glViewport(0, 0, m_w, m_h);
-    sh.bind();
-    va.bind();
-    ib.bind();
-    glDrawElements(draw_type,ib.get_num(), GL_UNSIGNED_INT, 0);
-    
-    
-}
-
-void Renderer::Draw(Grid_Mesh& gr, GLenum draw_type){
-    glfwGetFramebufferSize(m_primary_window, &m_w, &m_h);
-    glViewport(0, 0, m_w, m_h);
-    gr.DrawBind();
-    glDrawElements(draw_type,gr.num_idx(), GL_UNSIGNED_INT, 0);
-    
-    
+    //glBlendFunc(GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA);
 }
 
 
-void Renderer::Draw(Quad_Mesh& qd, GLenum draw_type){
-    glfwGetFramebufferSize(m_primary_window, &m_w, &m_h);
-    glViewport(0, 0, m_w, m_h);
-    qd.DrawBind();
-    glDrawElements(draw_type,qd.num_idx(), GL_UNSIGNED_INT, 0);
-    
-    
-}
 
-
-void Renderer::Draw(Box_Bounds& BB){
-    glfwGetFramebufferSize(m_primary_window, &m_w, &m_h);
-    glViewport(0, 0, m_w, m_h);
-    BB.DrawBind();
-    glDrawElementsInstanced(GL_TRIANGLES,BB.num_idx(), GL_UNSIGNED_INT,0, 12);
-}
-
-void Renderer::Draw(Test_Object& tst){
-    glfwGetFramebufferSize(m_primary_window, &m_w, &m_h);
-    glViewport(0, 0, m_w, m_h);
-    tst.DrawBind();
-    glDrawElementsInstanced(GL_TRIANGLES,tst.num_idx(), GL_UNSIGNED_INT,0, tst.num_obj());
-}
 
 
 int Renderer::is_open(){
-    return glfwWindowShouldClose(m_primary_window);
+    return glfwWindowShouldClose(m_Window);
 }
 
 void Renderer::poll(){
-    glfwSwapBuffers(m_primary_window);
-    if (m_second_window) {
-        glfwSwapBuffers(m_second_window);
-    }
-    
+    glfwSwapBuffers(m_Window);
     glfwPollEvents();
 }
 
 
-void Renderer::Get_res_loc(const Shader& sh){
-    m_res_loc = sh.UniformLoc("u_res");
-    
-}
-
-
-
-void Renderer::Write_Buffer(std::string file_name){
-    int count = 0;
-    int width, height;
-    glfwGetFramebufferSize(m_primary_window, &width, &height);
-    const int num_pix = 3 * width * height;
-    unsigned char* pixels = new unsigned char[num_pix];
-    
-    std::fstream outfile;
-    outfile.open(file_name, std::ios::out);
-    
-    glPixelStorei(GL_PACK_ALIGNMENT,1);
-    glReadBuffer(GL_FRONT);
-    glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, pixels);
-    
-    if(outfile.is_open()){
-        outfile << "P3\n" << width << " " << height << "\n255" << std::endl;
-        for (int i = 0; i < width*height; i++){
-            outfile << int(pixels[count]) << " "
-            << int(pixels[count + 1]) << " "
-            << int(pixels[count + 2]) << " " << std::endl;
-            count+=3;
-        }
-    }
-    else{
-        glfw_error_callback(21, "go fuck youself");
-    }
-    
-    outfile.close();
-    exit(0);
-    return;
-    
-}
 
 
 
 int Renderer::Write_Curr_Buffer(std::string file_name){
     stbi_flip_vertically_on_write(1);
     int width, height;
-    glfwGetFramebufferSize(m_primary_window, &width, &height);
+    glfwGetFramebufferSize(m_Window, &width, &height);
     const int num_pix = 3 * width * height;
     unsigned char* pixels = new unsigned char[num_pix];
     
@@ -248,12 +129,8 @@ int Renderer::Write_Curr_Buffer(std::string file_name){
 
 
 
-GLFWwindow* Renderer::draw_window(){
-    return m_primary_window;
-}
-
-GLFWwindow* Renderer::ui_window(){
-    return m_second_window;
+GLFWwindow* Renderer::Get_Window(){
+    return m_Window;
 }
 
 
@@ -264,6 +141,7 @@ GLFWwindow* Renderer::ui_window(){
 
 
 
+//##################################################################################################
 //THIS IS MY UI CLASS!!!!!!!!!!!
 
 UI_Window::UI_Window(float pos_x, float pos_y, GLFWwindow* window)
@@ -281,7 +159,7 @@ UI_Window::UI_Window(float pos_x, float pos_y, GLFWwindow* window)
     
     ImFont* font = m_io.Fonts -> AddFontFromFileTTF("/System/Library/Fonts/Helvetica.ttc", 16.0);
     IM_ASSERT(font != NULL);
-    glfwGetFramebufferSize(m_window, &display_w, &display_h);
+    //glfwGetFramebufferSize(m_window, &display_w, &display_h);
     view_x = 0.0;
     view_y = 0.0;
     
@@ -294,12 +172,18 @@ UI_Window::~UI_Window() {
 }
 
 
-
-
 void UI_Window::Simple_window(Operator& op ,Light_Src& light_src, int m_w, int m_h){
     static float theta = 0.0;
     static float phi = 0.0;
+    static float M_theta= 0.0;
+    static float M_phi= 0.0;
+    static float zoom = 1.0;
+    
+    static float C_theta = 0.0;
+    static float C_phi = 0.0;
+    
     static AMD::Vec3 trans;
+    static AMD::Vec3 look;
     const ImGuiKey m_keys[4] ={ImGuiKey_UpArrow, ImGuiKey_DownArrow, ImGuiKey_RightArrow, ImGuiKey_LeftArrow};
     
     ImGui::SetNextWindowPos(ImVec2(0.0, 0.0));
@@ -307,27 +191,22 @@ void UI_Window::Simple_window(Operator& op ,Light_Src& light_src, int m_w, int m
 
     ImGui::Begin("UI prarmeters");
     //####These are the functions that act on the Operator!!##################################
-    ImGui::SliderFloat("float", &op.M_Get_Scale(), 0.0f, 2.0f);
-    ImGui::Text("display w = %d, h = %d", m_w, m_h);// Edit 1 float using a slider from 0.0f to 1.0f
+    ImGui::SliderFloat("Zoom", &zoom, 0.0f, 2.0f);
+    ImGui::Text("display w = %d, h = %d", Ww, Wh);// Edit 1 float using a slider from 0.0f to 1.0f
     
-    op.Set_W_Scale(m_w, m_h);
+    op.Set_W_Scale(Ww, Wh);
 
     //Projection operations
-    ImGui::InputFloat("Near",&op.get_proj_vec()[2] , 0.1f, 1.0f, "%.1f");
-    ImGui::InputFloat("Far", &op.get_proj_vec()[3], 0.1f, 1.0f, "%.1f");
-    ImGui::InputFloat("X Lim", &op.get_proj_vec()[0], 0.1f, 1.0f, "%.1f");
-    ImGui::InputFloat("Y Lim", &op.get_proj_vec()[1], 0.1f, 1.0f, "%.1f");
+    ImGui::InputFloat("Near",&op.Get_Proj_vec()[2] , 0.1f, 1.0f, "%.1f");
+    ImGui::InputFloat("Far", &op.Get_Proj_vec()[3], 0.1f, 1.0f, "%.1f");
+    ImGui::InputFloat("X Lim", &op.Get_Proj_vec()[0], 0.1f, 1.0f, "%.1f");
+    ImGui::InputFloat("Y Lim", &op.Get_Proj_vec()[1], 0.1f, 1.0f, "%.1f");
    
     
     
-    ImGui::InputFloat("View X", &op.V_translation[0], 0.05f, 1.0f, "%.2f");
-    ImGui::InputFloat("View Y", &op.V_translation[1], 0.05f, 1.0f, "%.2f");
-    ImGui::InputFloat("View Z", &op.V_translation[2], 0.05f, 1.0f, "%.2f");
-    
-    
-    ImGui::InputFloat("Model X", &op.M_Get_Trans()[0], 0.05f, 1.0f, "%.2f");
-    ImGui::InputFloat("Model Y", &op.M_Get_Trans()[1], 0.05f, 1.0f, "%.2f");
-    ImGui::InputFloat("Model Z", &op.M_Get_Trans()[2], 0.05f, 1.0f, "%.2f");
+    ImGui::InputFloat("View X", &op.m_Cam.Get_Pos()[0], 0.05f, 1.0f, "%.2f");
+    ImGui::InputFloat("View Y", &op.m_Cam.Get_Pos()[1], 0.05f, 1.0f, "%.2f");
+    ImGui::InputFloat("View Z", &op.m_Cam.Get_Pos()[2], 0.05f, 1.0f, "%.2f");
     
     
     for ( int i = 0; i < 4; i++){
@@ -335,18 +214,22 @@ void UI_Window::Simple_window(Operator& op ,Light_Src& light_src, int m_w, int m
         
         switch (i) {
             case 0:
-                op.M_Get_Trans()[1] += 0.025;
+                op.m_Cam.Move_UpDown(0.01);
+                //C_theta -= 0.1;
                 break;
                 
             case 1:
-                op.M_Get_Trans()[1] -= 0.025;
+                op.m_Cam.Move_UpDown(-0.01);
+                //C_theta += 0.1;
                 break;
             case 2:
-                op.M_Get_Trans()[0] += 0.025;
+                //op.m_Cam.Move_LeftRight(-0.01);
+                C_phi +=0.1;
                 break;
                 
             case 3:
-                op.M_Get_Trans()[0] -= 0.025;
+                //op.m_Cam.Move_LeftRight(0.01);
+                C_phi -=0.1;
                 break;
                 
                 
@@ -361,68 +244,38 @@ void UI_Window::Simple_window(Operator& op ,Light_Src& light_src, int m_w, int m
     if (m_io.KeyShift){
         
         if (ImGui::IsKeyDown(ImGuiKey_UpArrow)){
-            op.M_Get_Trans()[2] += 0.05;
+            op.m_Cam.Move_ForwardBackward(0.1);
             
         }
         else if (ImGui::IsKeyDown(ImGuiKey_DownArrow)){
-            op.M_Get_Trans()[2] -= 0.05;
-            
-        }
-        
-    }
-    
-    if (m_io.KeyAlt){
-        
-        if (ImGui::IsKeyDown(ImGuiKey_UpArrow)){
-            op.M_rotation_vec[2] = 0.01;
-            op.M_set_rotation();
-            
-        }
-        else if (ImGui::IsKeyDown(ImGuiKey_DownArrow)){
-            op.M_rotation_vec[2] = -0.005;
-            op.M_set_rotation();
-            
-        }
-        else if (ImGui::IsKeyDown(ImGuiKey_RightArrow)){
-            op.M_rotation_vec[1] = -0.005;
-            op.M_set_rotation();
+            op.m_Cam.Move_ForwardBackward(-0.1);
             
         }
         else if (ImGui::IsKeyDown(ImGuiKey_LeftArrow)){
-            op.M_rotation_vec[1] = 0.005;
-            op.M_set_rotation();
-            
+            op.m_Cam.Move_LeftRight(-0.1);
         }
-        else if (ImGui::IsKeyDown(ImGuiKey_P)){
-            op.M_rotation_vec[0] = -0.001;
-            op.M_set_rotation();
-            
-        }
-        else if (ImGui::IsKeyDown(ImGuiKey_L)){
-            op.M_rotation_vec[0] = 0.001;
-            op.M_set_rotation();
-            
+        else if (ImGui::IsKeyDown(ImGuiKey_RightArrow)){
+            op.m_Cam.Move_LeftRight(0.1);
         }
     }
     
+    
     if(!m_io.WantCaptureMouse){
         if(ImGui::IsMouseDragging(0)){
-            op.M_rotation_vec[1] = -0.01*m_io.MouseDelta.x; op.M_rotation_vec[2]  = -0.01*m_io.MouseDelta.y;
-            op.M_set_rotation();
+            M_phi += 0.01*m_io.MouseDelta.x; M_theta  += 0.01*m_io.MouseDelta.y;
             
         }
     }
    
     
     
-    
     ImGui::Text("Light Color:"); ImGui::SameLine(); ImGui::Text("Clear Color:");
     float w = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.y) * 0.40f;
     ImGui::SetNextItemWidth(w);
-    ImGui::ColorPicker4("##MyColor##2", light_src.get_clr_ptr(), ImGuiColorEditFlags_PickerHueBar | ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha);
+    ImGui::ColorPicker4("##MyColor##2", light_src.Get_Color_ptr(), ImGuiColorEditFlags_PickerHueBar | ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoAlpha);
     ImGui::SameLine();
     ImGui::SetNextItemWidth(w);
-    ImGui::ColorPicker3("##MyColor##3", (float*)(&m_cc), ImGuiColorEditFlags_NoInputs);
+    ImGui::ColorPicker3("##MyColor##3", CC.get(), ImGuiColorEditFlags_NoInputs);
 
 
     static int div1 = 0;
@@ -433,11 +286,24 @@ void UI_Window::Simple_window(Operator& op ,Light_Src& light_src, int m_w, int m
     theta = PI*(div1/10.0);
     phi = PI*(div2/10.0);
     
-    light_src.set_light_dir(theta, phi);
-    AMD::Vec3 light = light_src.get_light_src();
-    ImGui::Text("x = %f, y = %f, z = %f", light[0],light[1],light[2]);
-    
-    ImGui::InputFloat("Color Saturation", light_src.get_src_ptr(), 0.01f, 1.0f, "%.2f");
+    light_src.Set_Pos(theta, phi);
+    AMD::Vec3 light = light_src.Get_Pos();
+    ImGui::Text("theta = %f, phi = %f", theta, phi);
+    ImGui::Text("Light Source Position");
+    ImGui::SameLine();
+    ImGui::Text("x = %f, y = %f, z = %f", light.x, light.y,light.z);
+    ImGui::Text("Target");
+    ImGui::SameLine();
+    ImGui::Text("x = %f, y = %f, z = %f", light_src.Get_Target().x,light_src.Get_Target().z,light_src.Get_Target().z);
+    ImGui::Text("Direction");
+    ImGui::SameLine();
+    ImGui::Text("x = %f, y = %f, z = %f", light_src.Get_Direction_vec().x,light_src.Get_Direction_vec().y,light_src.Get_Direction_vec().z);
+    op.m_Cam.Look_UpDown(C_theta);
+    op.m_Cam.Look_LeftRight(C_phi);
+    op.m_model.Rotate_Pole(M_theta);
+    op.m_model.Rotate_Azimuth(M_phi);
+    //op.m_Cam.Look_At(AMD::Vec3(0.0,0.0,10.0));
+    ImGui::InputFloat("Color Saturation", light_src.Get_Dir_ptr(), 0.01f, 1.0f, "%.2f");
     
     
         if (ImGui::Button("SAVE")){
@@ -453,7 +319,7 @@ void UI_Window::Simple_window(Operator& op ,Light_Src& light_src, int m_w, int m
 
 
 
-
+/*
 void UI_Window::log_window(Ensamble_Of_Atoms& ats){
  
     AMD::Vec3 at1;
@@ -498,7 +364,7 @@ void UI_Window::log_window(Ensamble_Of_Atoms& ats){
     
 }
 
-
+*/
 void UI_Window::log_window(Bond* bd, int num){
  
     if (ImGui::BeginTable("table1", 2, ImGuiTableFlags_Hideable))
@@ -593,7 +459,7 @@ void UI_Window::log_window( AMD::Vertex* verts, unsigned int* idx ,int num){
 }
 
 
-void UI_Window::log_window( AMD::Mat4 mat){
+void UI_Window::log_window( AMD::Mat4 mat, bool T){
     if (ImGui::BeginTable("table1", 4, ImGuiTableFlags_Hideable))
     {
         ImGui::TableSetupColumn("1");
@@ -609,7 +475,12 @@ void UI_Window::log_window( AMD::Mat4 mat){
             for (int column = 0; column < 4; column++)
             {
                 ImGui::TableSetColumnIndex(column);
-                ImGui::Text("%f", mat[column][row]);
+                if(T){
+                    ImGui::Text("%f", mat[column][row]);
+                }
+                else{
+                    ImGui::Text("%f", mat[row][column]);
+                }
             }
 
         }
@@ -649,52 +520,88 @@ void UI_Window::log_window(int nebs[][2], int num){
      ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
  }
 
-AMD::Vec4& UI_Window::get_color() {
-    return m_cc;
-}
-
-
-void UI_Window::mouse_drag(AMD::Vec3& vec){
-    return;
-}
-
-
-
-void UI_Window::Write_Buffer(std::string file_name){
-    int count = 0;
-    int width, height;
-    glfwGetFramebufferSize(m_window, &width, &height);
-    const int num_pix = 3 * width * height;
-    unsigned char* pixels = new unsigned char[num_pix];
-    
-    std::fstream outfile;
-    outfile.open(file_name, std::ios::out);
-    
-    glPixelStorei(GL_PACK_ALIGNMENT,1);
-    glReadBuffer(GL_FRONT);
-    glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, pixels);
-    
-    if(outfile.is_open()){
-        outfile << "P3\n" << width << " " << height << "\n255" << std::endl;
-        for (int i = 0; i < width*height; i++){
-            outfile << int(pixels[count]) << " "
-            << int(pixels[count + 1]) << " "
-            << int(pixels[count + 2]) << " " << std::endl;
-            count+=3;
-        }
-    }
-    
-    outfile.close();
-    delete[] pixels;
-    return;
-    
-}
 
 
 
 
 
 
+
+
+/*
+ void Renderer::Draw_Instanced(IndexBuffer& ib, VertexArray& va, Shader& sh, GLenum draw_type, int num){
+     glfwGetFramebufferSize(m_Window, &m_w, &m_h);
+     glViewport(0, 0, m_w, m_h);
+     glUniform2f(m_res_loc,float(m_w),float(m_h));
+     sh.bind();
+     va.bind();
+     ib.bind();
+     glDrawElementsInstanced(draw_type,ib.get_num(), GL_UNSIGNED_INT,0, num);
+     
+ }
+
+
+ void Renderer::Draw(IndexBuffer& ib, VertexArray& va, Shader& sh, GLenum draw_type){
+     glfwGetFramebufferSize(m_Window, &m_w, &m_h);
+     glViewport(0, 0, m_w, m_h);
+     sh.bind();
+     va.bind();
+     ib.bind();
+     glDrawElements(draw_type,ib.get_num(), GL_UNSIGNED_INT, 0);
+ }
+ 
+ 
+ void Renderer::Write_Buffer(std::string file_name){
+     int count = 0;
+     int width, height;
+     glfwGetFramebufferSize(m_Window, &width, &height);
+     const int num_pix = 3 * width * height;
+     unsigned char* pixels = new unsigned char[num_pix];
+     
+     std::fstream outfile;
+     outfile.open(file_name, std::ios::out);
+     
+     glPixelStorei(GL_PACK_ALIGNMENT,1);
+     glReadBuffer(GL_FRONT);
+     glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+     
+     if(outfile.is_open()){
+         outfile << "P3\n" << width << " " << height << "\n255" << std::endl;
+         for (int i = 0; i < width*height; i++){
+             outfile << int(pixels[count]) << " "
+             << int(pixels[count + 1]) << " "
+             << int(pixels[count + 2]) << " " << std::endl;
+             count+=3;
+         }
+     }
+     else{
+         glfw_error_callback(21, "go fuck youself");
+     }
+     
+     outfile.close();
+     exit(0);
+     return;
+     
+ }
+
+ void Renderer::Draw_ShadowMap(Quad_Mesh& qd, ShadowMap& sm){
+     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+     sm.Enable();
+     sm.ReadBind(0);
+     qd.Bind();
+     glDisable(GL_DEPTH_TEST);
+     glBindTexture(GL_TEXTURE_2D, sm.m_depth);
+     glDrawElements(GL_TRIANGLES,qd.num_idx(), GL_UNSIGNED_INT, 0);
+     
+ }
+ 
+ 
+ 
+ static void glfw_error_callback(int error, const char* description)
+ {
+     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
+ }
+ */
 
 
 
